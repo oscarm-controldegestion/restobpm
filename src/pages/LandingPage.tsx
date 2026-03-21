@@ -82,7 +82,7 @@ export default function LandingPage() {
               D.S. 977/96 · RSA Chile · Control en tiempo real
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6 landing-fade-up landing-fade-up-1">
-              El SEREMI DE SALUD no avisa.<br/>
+              La SEREMI DE SALUD no avisa.<br/>
               <span className="text-blue-300">¿Tu local está listo?</span>
             </h1>
             <p className="text-lg sm:text-xl text-white/70 leading-relaxed mb-10 max-w-2xl landing-fade-up landing-fade-up-2">
@@ -126,7 +126,7 @@ export default function LandingPage() {
                 <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               </div>
               <h3 className="font-bold text-gray-800 mb-2">Multas imprevistas</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">Sin registro digital, el incumplimiento pasa desapercibido hasta que el SEREMI DE SALUD ya está en la puerta — y la multa, en el bolsillo.</p>
+              <p className="text-sm text-gray-500 leading-relaxed">Sin registro digital, el incumplimiento pasa desapercibido hasta que la SEREMI DE SALUD ya está en la puerta — y la multa, en el bolsillo.</p>
             </div>
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-orange-100 landing-card-hover">
               <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center mb-4">
@@ -166,7 +166,7 @@ export default function LandingPage() {
               { bg: 'bg-[#1F3864]/5', border: 'border-[#1F3864]/15', ibg: 'bg-[#1F3864]', title: 'Dashboard en tiempo real', desc: 'Visualiza el estado de cumplimiento de todos los módulos BPM en un solo panel. Detecta desvíos al instante, desde tu teléfono o computador.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> },
               { bg: 'bg-green-50', border: 'border-green-200', ibg: 'bg-green-600', title: 'Checklists digitales con folio', desc: 'Cada control queda registrado con fecha, hora, operador responsable y folio único. Imposible de falsificar, siempre disponible.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> },
               { bg: 'bg-amber-50', border: 'border-amber-200', ibg: 'bg-amber-500', title: 'Alertas push automáticas', desc: 'Recibe notificaciones cuando una temperatura se desvía del rango, un checklist no se completa a tiempo o surge una no conformidad.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
-              { bg: 'bg-blue-50', border: 'border-blue-200', ibg: 'bg-blue-600', title: 'Informe PDF para el SEREMI DE SALUD', desc: 'Genera el informe de cumplimiento BPM en segundos. Con firma digital, folio y todos los registros del período. Muéstralo en la fiscalización.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
+              { bg: 'bg-blue-50', border: 'border-blue-200', ibg: 'bg-blue-600', title: 'Informe PDF para la SEREMI DE SALUD', desc: 'Genera el informe de cumplimiento BPM en segundos. Con firma digital, folio y todos los registros del período. Muéstralo en la fiscalización.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
               { bg: 'bg-purple-50', border: 'border-purple-200', ibg: 'bg-purple-600', title: 'Métricas e historial', desc: 'Analiza tendencias, puntajes de cumplimiento por módulo y evolución mensual. Toma decisiones con datos reales de tu establecimiento.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
               { bg: 'bg-indigo-50', border: 'border-indigo-200', ibg: 'bg-indigo-600', title: 'Gestión de roles y operadores', desc: 'Asigna roles de operador, supervisor y administrador. Cada persona ve y hace solo lo que le corresponde.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
             ].map((f, i) => (
@@ -198,7 +198,7 @@ export default function LandingPage() {
           <div className="text-center mb-14">
             <p className="text-sm font-semibold text-[#1F3864] uppercase tracking-widest mb-3">Módulos BPM</p>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">Todos los módulos que exige la RSA</h2>
-            <p className="mt-4 text-gray-500 max-w-2xl mx-auto text-base">Basados en el D.S. 977/96 y los requerimientos del SEREMI DE SALUD para establecimientos de producción y expendio de alimentos.</p>
+            <p className="mt-4 text-gray-500 max-w-2xl mx-auto text-base">Basados en el D.S. 977/96 y los requerimientos dla SEREMI DE SALUD para establecimientos de producción y expendio de alimentos.</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {[
@@ -223,7 +223,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <p className="font-bold">100% alineado con D.S. 977/96 — Reglamento Sanitario de los Alimentos</p>
-                <p className="text-sm text-white/60">Checklists diseñados según los requerimientos del SEREMI DE SALUD para establecimientos de alimentos en Chile.</p>
+                <p className="text-sm text-white/60">Checklists diseñados según los requerimientos dla SEREMI DE SALUD para establecimientos de alimentos en Chile.</p>
               </div>
             </div>
             <Link to="/register" className="shrink-0 bg-white text-[#1F3864] font-bold px-6 py-3 rounded-xl text-sm hover:bg-gray-100 transition-colors whitespace-nowrap">
