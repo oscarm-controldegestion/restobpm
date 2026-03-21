@@ -1,12 +1,17 @@
 {
-  "rewrites": [
-    { "source": "/",             "destination": "/landing.html" },
-    { "source": "/login",        "destination": "/index.html" },
-    { "source": "/register",     "destination": "/index.html" },
-    { "source": "/trial-expired","destination": "/index.html" },
-    { "source": "/admin/:path*", "destination": "/index.html" },
-    { "source": "/supervisor/:path*", "destination": "/index.html" },
-    { "source": "/operator/:path*",   "destination": "/index.html" },
-    { "source": "/superadmin/:path*", "destination": "/index.html" }
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "routes": [
+    { "src": "^/$", "dest": "/landing.html" },
+    { "src": "^/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "^/(favicon\\.svg|manifest\\.json|manifest\\.webmanifest|registerSW\\.js|sw\\.js|workbox-.+\\.js)$", "dest": "/$1" },
+    { "src": "^/login$",         "dest": "/index.html" },
+    { "src": "^/register$",      "dest": "/index.html" },
+    { "src": "^/trial-expired$", "dest": "/index.html" },
+    { "src": "^/admin(.*)",      "dest": "/index.html" },
+    { "src": "^/supervisor(.*)", "dest": "/index.html" },
+    { "src": "^/operator(.*)",   "dest": "/index.html" },
+    { "src": "^/superadmin(.*)", "dest": "/index.html" },
+    { "src": "/(.*)",            "dest": "/index.html" }
   ]
 }
