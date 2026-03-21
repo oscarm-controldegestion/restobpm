@@ -362,7 +362,7 @@ export default function LandingPage() {
                 </div>
                 RestoBPM
               </div>
-              <p className="text-white/50 text-sm leading-relaxed">Sistema de control de Buenas Prácticas de Manufactura para establecimientos de alimentos en Chile.</p>
+              <p className="text-white/50 text-sm leading-relaxed">Sistema de apoyo en control de Buenas Prácticas de Manufactura para establecimientos de alimentos en Chile.</p>
               <p className="text-white/30 text-xs mt-3">D.S. 977/96 — RSA Chile</p>
             </div>
             <div>
