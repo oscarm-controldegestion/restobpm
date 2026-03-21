@@ -3,8 +3,7 @@
   "outputDirectory": "dist",
   "routes": [
     { "src": "^/$", "dest": "/landing.html" },
-    { "src": "^/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "^/(favicon\\.svg|manifest\\.json|manifest\\.webmanifest|registerSW\\.js|sw\\.js|workbox-.+\\.js)$", "dest": "/$1" },
+    { "handle": "filesystem" },
     { "src": "^/login$",         "dest": "/index.html" },
     { "src": "^/register$",      "dest": "/index.html" },
     { "src": "^/trial-expired$", "dest": "/index.html" },
