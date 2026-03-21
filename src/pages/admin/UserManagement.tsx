@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { UserPlus, Pencil, ToggleLeft, ToggleRight, ShieldCheck, Eye, Wrench } from 'lucide-react'
+import { UserPlus, ToggleLeft, ToggleRight, ShieldCheck, Eye, Wrench, Copy, CheckCircle2, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import type { Profile, UserRole } from '@/types'
@@ -10,6 +10,12 @@ const ROLE_CONFIG: Record<UserRole, { label: string; icon: React.ElementType; co
   operator:   { label: 'Operador',      icon: Wrench,      color: 'text-orange-700 bg-orange-50' },
 }
 
+interface NewUserResult {
+  name: string
+  email: string
+  tempPassword: string
+}
+
 export default function UserManagement() {
   const { tenant } = useAuth()
   const [users, setUsers]     = useState<Profile[]>([])
@@ -18,6 +24,8 @@ export default function UserManagement() {
   const [form, setForm]       = useState({ full_name: '', rut: '', email: '', role: 'operator' as UserRole })
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState<string | null>(null)
+  const [newUser, setNewUser] = useState<NewUserResult | null>(null)
+  const [copied, setCopied]   = useState(false)
 
   useEffect(() => { loadUsers() }, [])
 
@@ -42,33 +50,40 @@ export default function UserManagement() {
     setSaving(true)
     setError(null)
 
-    // Crear usuario en Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: form.email,
-      password: Math.random().toString(36).slice(-10) + 'Aa1!',
-      email_confirm: true,
+    const { data, error: fnError } = await supabase.functions.invoke('create-tenant-user', {
+      body: {
+        email:    form.email.trim().toLowerCase(),
+        fullName: form.full_name.trim(),
+        rut:      form.rut.trim(),
+        role:     form.role,
+        tenantId: tenant!.id,
+      },
     })
 
-    if (authError || !authData.user) {
-      setError('No se pudo crear el usuario. Verifica que el correo no esté registrado.')
+    if (fnError || data?.error) {
+      setError(data?.error ?? 'No se pudo crear el usuario. Intenta de nuevo.')
       setSaving(false)
       return
     }
 
-    // Crear perfil
-    await supabase.from('profiles').insert({
-      id: authData.user.id,
-      tenant_id: tenant!.id,
-      full_name: form.full_name,
-      rut: form.rut,
-      role: form.role,
-      active: true,
+    // Mostrar contraseña temporal al admin
+    setNewUser({
+      name:         form.full_name.trim(),
+      email:        form.email.trim().toLowerCase(),
+      tempPassword: data.tempPassword,
     })
 
     await loadUsers()
     setShowForm(false)
     setForm({ full_name: '', rut: '', email: '', role: 'operator' })
     setSaving(false)
+  }
+
+  const copyPassword = async () => {
+    if (!newUser) return
+    await navigator.clipboard.writeText(newUser.tempPassword)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -79,7 +94,7 @@ export default function UserManagement() {
           <p className="text-gray-500 text-sm">{users.length} usuarios en tu establecimiento</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { setShowForm(!showForm); setError(null) }}
           className="flex items-center gap-2 bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-brand-900 transition-colors"
         >
           <UserPlus size={16} />
@@ -87,42 +102,115 @@ export default function UserManagement() {
         </button>
       </div>
 
-      {/* Formulario */}
+      {/* ── Resultado de creación: mostrar credenciales ── */}
+      {newUser && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 size={20} className="text-green-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-green-800">Usuario creado exitosamente</p>
+                <p className="text-sm text-green-700 mt-1">
+                  Comparte estas credenciales con <strong>{newUser.name}</strong> para que pueda ingresar:
+                </p>
+                <div className="mt-3 bg-white border border-green-200 rounded-lg p-3 text-sm font-mono space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400 w-24 text-xs font-sans">Correo</span>
+                    <span className="text-gray-800">{newUser.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400 w-24 text-xs font-sans">Contraseña</span>
+                    <span className="text-gray-800 font-bold tracking-wider">{newUser.tempPassword}</span>
+                    <button
+                      onClick={copyPassword}
+                      className="ml-2 flex items-center gap-1 text-xs text-green-700 hover:text-green-900 transition-colors"
+                    >
+                      {copied ? <><CheckCircle2 size={13} />Copiado</> : <><Copy size={13} />Copiar</>}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-green-600 mt-2">
+                  El usuario podrá cambiar su contraseña desde su perfil después de ingresar.
+                </p>
+              </div>
+            </div>
+            <button onClick={() => setNewUser(null)} className="text-green-400 hover:text-green-600">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Formulario de creación ── */}
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="font-semibold text-gray-800 mb-4">Crear nuevo usuario</h2>
           <form onSubmit={handleCreate} className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Nombre completo *</label>
-              <input required value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})}
+              <input
+                required
+                value={form.full_name}
+                onChange={e => setForm({...form, full_name: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                placeholder="Juan Pérez González" />
+                placeholder="Juan Pérez González"
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">RUT</label>
-              <input value={form.rut} onChange={e => setForm({...form, rut: e.target.value})}
+              <input
+                value={form.rut}
+                onChange={e => setForm({...form, rut: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                placeholder="12.345.678-9" />
+                placeholder="12.345.678-9"
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Correo electrónico *</label>
-              <input required type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
+              <input
+                required
+                type="email"
+                value={form.email}
+                onChange={e => setForm({...form, email: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                placeholder="juan@establecimiento.cl" />
+                placeholder="juan@establecimiento.cl"
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Rol *</label>
-              <select value={form.role} onChange={e => setForm({...form, role: e.target.value as UserRole})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <select
+                value={form.role}
+                onChange={e => setForm({...form, role: e.target.value as UserRole})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
                 <option value="operator">Operador</option>
                 <option value="supervisor">Supervisor</option>
-                <option value="admin">Administrador</option>
               </select>
             </div>
-            {error && <p className="sm:col-span-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+
+            <div className="sm:col-span-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700">
+              Se generará una contraseña temporal que podrás copiar y compartir con el usuario.
+            </div>
+
+            {error && (
+              <p className="sm:col-span-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-100">
+                {error}
+              </p>
+            )}
+
             <div className="sm:col-span-2 flex gap-3 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
-              <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold bg-brand-700 text-white rounded-lg hover:bg-brand-900 disabled:opacity-60">
+              <button
+                type="button"
+                onClick={() => { setShowForm(false); setError(null) }}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 text-sm font-semibold bg-brand-700 text-white rounded-lg hover:bg-brand-900 disabled:opacity-60"
+              >
                 {saving ? 'Creando...' : 'Crear usuario'}
               </button>
             </div>
@@ -130,18 +218,23 @@ export default function UserManagement() {
         </div>
       )}
 
-      {/* Lista */}
+      {/* ── Lista de usuarios ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="p-6 space-y-3">
             {[1,2,3].map(i => <div key={i} className="h-14 bg-gray-100 rounded animate-pulse" />)}
+          </div>
+        ) : users.length === 0 ? (
+          <div className="p-10 text-center text-gray-400">
+            <UserPlus size={32} className="mx-auto mb-2 opacity-30" />
+            <p className="text-sm">Aún no hay usuarios. Crea el primero.</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Usuario</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">RUT</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 hidden sm:table-cell">RUT</th>
                 <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Rol</th>
                 <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Estado</th>
                 <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">Acciones</th>
@@ -156,7 +249,9 @@ export default function UserManagement() {
                     <td className="py-3 px-4">
                       <p className="font-medium text-gray-800">{user.full_name}</p>
                     </td>
-                    <td className="py-3 px-4 text-gray-500 font-mono text-xs">{user.rut ?? '—'}</td>
+                    <td className="py-3 px-4 text-gray-500 font-mono text-xs hidden sm:table-cell">
+                      {user.rut ?? '—'}
+                    </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${role.color}`}>
                         <Icon size={12} />
@@ -172,7 +267,10 @@ export default function UserManagement() {
                         className="text-gray-400 hover:text-gray-600 transition-colors"
                         title={user.active ? 'Desactivar' : 'Activar'}
                       >
-                        {user.active ? <ToggleRight size={20} className="text-green-500" /> : <ToggleLeft size={20} />}
+                        {user.active
+                          ? <ToggleRight size={20} className="text-green-500" />
+                          : <ToggleLeft size={20} />
+                        }
                       </button>
                     </td>
                   </tr>

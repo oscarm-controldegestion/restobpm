@@ -57,7 +57,8 @@ function SuperAdminRoute({ children }: { children: JSX.Element }) {
 }
 
 function RoleBasedHome() {
-  const { profile, isSuperAdmin, isTrialExpired } = useAuth()
+  const { profile, isSuperAdmin, isTrialExpired, loading } = useAuth()
+  if (loading) return <LoadingScreen />
   if (isSuperAdmin) return <Navigate to="/superadmin/dashboard" replace />
   if (!profile) return <Navigate to="/login" replace />
   if (isTrialExpired) return <Navigate to="/trial-expired" replace />
