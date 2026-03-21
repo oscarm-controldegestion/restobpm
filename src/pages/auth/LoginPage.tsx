@@ -1,25 +1,37 @@
-import { useState, type FormEvent } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { useState, useEffect, type FormEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
 
 export default function LoginPage() {
-  const { user, signIn } = useAuth()
+  const { user, profile, isSuperAdmin, loading: authLoading, signIn } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw]     = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
 
-  if (user) return <Navigate to="/" replace />
+  // Redirigir si ya hay sesión activa
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) return
+    if (isSuperAdmin) { navigate('/superadmin/dashboard', { replace: true }); return }
+    if (profile?.role === 'admin')      navigate('/admin/dashboard',      { replace: true })
+    else if (profile?.role === 'supervisor') navigate('/supervisor/dashboard', { replace: true })
+    else if (profile?.role === 'operator')   navigate('/operator/home',        { replace: true })
+  }, [user, profile, isSuperAdmin, authLoading, navigate])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
     const { error } = await signIn(email.trim(), password)
-    if (error) setError('Correo o contraseña incorrectos')
-    setLoading(false)
+    if (error) {
+      setError('Correo o contraseña incorrectos')
+      setLoading(false)
+    }
+    // Si OK: onAuthStateChange actualiza user/profile y el useEffect redirige
   }
 
   return (
