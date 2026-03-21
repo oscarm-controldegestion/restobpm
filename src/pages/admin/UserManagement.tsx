@@ -50,18 +50,16 @@ export default function UserManagement() {
     setSaving(true)
     setError(null)
 
-    const { data, error: fnError } = await supabase.functions.invoke('create-tenant-user', {
-      body: {
-        email:    form.email.trim().toLowerCase(),
-        fullName: form.full_name.trim(),
-        rut:      form.rut.trim(),
-        role:     form.role,
-        tenantId: tenant!.id,
-      },
+    const { data, error: rpcError } = await supabase.rpc('create_tenant_user', {
+      p_email:     form.email.trim().toLowerCase(),
+      p_full_name: form.full_name.trim(),
+      p_rut:       form.rut.trim(),
+      p_role:      form.role,
+      p_tenant_id: tenant!.id,
     })
 
-    if (fnError || data?.error) {
-      setError(data?.error ?? 'No se pudo crear el usuario. Intenta de nuevo.')
+    if (rpcError || data?.error) {
+      setError(data?.error ?? rpcError?.message ?? 'No se pudo crear el usuario. Intenta de nuevo.')
       setSaving(false)
       return
     }
