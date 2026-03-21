@@ -1,5 +1,8 @@
-import { Check, Zap, Star, Building2, MessageCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useSearchParams, Link } from 'react-router-dom'
+import { Check, Zap, Star, Building2, MessageCircle, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 import { PRICING_PLANS } from '@/types'
 import type { SubscriptionPlan } from '@/types'
 
@@ -15,12 +18,48 @@ const PLAN_ICON: Record<string, typeof Check> = {
 }
 
 export default function Subscription() {
-  const { tenant } = useAuth()
+  const { tenant, refreshTenant, trialDaysLeft } = useAuth()
+  const [searchParams] = useSearchParams()
+  const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null)
+  const [payResult, setPayResult] = useState<'exitoso' | 'fallido' | 'pendiente' | null>(null)
+
   const currentPlan = (tenant?.plan ?? 'trial') as SubscriptionPlan
 
-  const handleUpgrade = (planId: SubscriptionPlan) => {
-    // TODO: Conectar con MercadoPago / Transbank
-    alert(`Redirigiendo a pago del plan ${planId}…`)
+  // Detectar retorno desde MercadoPago
+  useEffect(() => {
+    const pago = searchParams.get('pago') as typeof payResult
+    if (pago) {
+      setPayResult(pago)
+      if (pago === 'exitoso') {
+        // Refrescar tenant después de un momento (el webhook puede tardar 1-2s)
+        setTimeout(() => refreshTenant(), 2000)
+      }
+    }
+  }, [searchParams])
+
+  const handleUpgrade = async (planId: SubscriptionPlan) => {
+    if (!tenant) return
+    setLoadingPlan(planId)
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: { planId, tenantId: tenant.id },
+      })
+
+      if (error || !data?.init_point) {
+        alert('No se pudo iniciar el proceso de pago. Por favor intenta de nuevo.')
+        setLoadingPlan(null)
+        return
+      }
+
+      // Redirigir a MercadoPago (sandbox_init_point en desarrollo)
+      const url = data.init_point
+      window.location.href = url
+
+    } catch {
+      alert('Error al conectar con el servicio de pago.')
+      setLoadingPlan(null)
+    }
   }
 
   const paidPlans = PRICING_PLANS.filter(p => p.id !== 'trial')
@@ -37,10 +76,53 @@ export default function Subscription() {
         </p>
       </div>
 
+      {/* Resultado de pago */}
+      {payResult === 'exitoso' && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
+          <CheckCircle2 size={20} className="text-green-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-green-800">¡Pago recibido! Tu plan está siendo activado.</p>
+            <p className="text-sm text-green-600 mt-0.5">En unos segundos tu cuenta se actualizará. Si no cambia, recarga la página.</p>
+          </div>
+        </div>
+      )}
+      {payResult === 'pendiente' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <Clock size={20} className="text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-amber-800">Pago en proceso</p>
+            <p className="text-sm text-amber-600 mt-0.5">Tu pago está siendo procesado. Te notificaremos cuando se confirme.</p>
+          </div>
+        </div>
+      )}
+      {payResult === 'fallido' && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <XCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-red-800">El pago no se completó</p>
+            <p className="text-sm text-red-600 mt-0.5">Por favor intenta de nuevo o contacta a soporte.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Banner trial */}
+      {trialDaysLeft !== null && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+          <Clock size={18} className="text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-700">
+            {trialDaysLeft === 0
+              ? 'Tu período de prueba termina hoy. Contrata un plan para continuar usando RestoBPM.'
+              : `Te quedan ${trialDaysLeft} día${trialDaysLeft === 1 ? '' : 's'} de prueba gratuita.`
+            }
+          </p>
+        </div>
+      )}
+
       {/* Planes pagados — 3 columnas */}
       <div className="grid sm:grid-cols-3 gap-5">
         {paidPlans.map(plan => {
           const isCurrent = plan.id === currentPlan
+          const isLoading = loadingPlan === plan.id
           const Icon = PLAN_ICON[plan.id] ?? Zap
           return (
             <div
@@ -124,14 +206,18 @@ export default function Subscription() {
                 ) : (
                   <button
                     onClick={() => handleUpgrade(plan.id)}
-                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    disabled={!!loadingPlan}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 ${
                       plan.highlighted
                         ? 'bg-brand-700 hover:bg-brand-900 text-white'
                         : 'bg-gray-800 hover:bg-gray-900 text-white'
                     }`}
                   >
-                    <Zap size={14} />
-                    Contratar
+                    {isLoading ? (
+                      <><Loader2 size={14} className="animate-spin" />Redirigiendo…</>
+                    ) : (
+                      <><Zap size={14} />Contratar con MercadoPago</>
+                    )}
                   </button>
                 )}
               </div>
@@ -140,19 +226,25 @@ export default function Subscription() {
         })}
       </div>
 
-      {/* Nota IVA */}
-      <p className="text-xs text-gray-400 text-center">
-        Todos los precios expresados en pesos chilenos (CLP) sin IVA (19%). Facturación mensual.
-      </p>
+      {/* Nota IVA + seguridad */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <p className="text-xs text-gray-400">
+          Precios en CLP sin IVA (19%). Facturación mensual. Cancela cuando quieras.
+        </p>
+        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-green-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Pago seguro vía MercadoPago
+        </div>
+      </div>
 
       {/* Contacto */}
       <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
         <div className="flex items-start gap-3">
           <MessageCircle size={18} className="text-indigo-500 shrink-0 mt-0.5" />
           <div className="text-sm text-indigo-700">
-            <strong>¿Tienes más de 5 sucursales o necesitas algo personalizado?</strong>
+            <strong>¿Necesitas factura o tienes más de 5 sucursales?</strong>
             <p className="text-xs text-indigo-500 mt-0.5">
-              Contáctanos para una propuesta a medida para cadenas de restaurantes o empresas de alimentación colectiva.
+              Escríbenos a <a href="mailto:contacto@restobpm.cl" className="underline">contacto@restobpm.cl</a> para una propuesta a medida.
             </p>
           </div>
         </div>
