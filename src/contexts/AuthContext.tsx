@@ -10,6 +10,8 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   isSuperAdmin: boolean
+  isTrialExpired: boolean
+  trialDaysLeft: number | null   // null si no es trial
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -25,6 +27,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession]       = useState<Session | null>(null)
   const [loading, setLoading]       = useState(true)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+
+  // Computed: trial status
+  const isTrialExpired: boolean = (() => {
+    if (!tenant || tenant.plan !== 'trial') return false
+    if (!tenant.plan_expires_at) return false
+    return new Date(tenant.plan_expires_at) < new Date()
+  })()
+
+  const trialDaysLeft: number | null = (() => {
+    if (!tenant || tenant.plan !== 'trial') return null
+    if (!tenant.plan_expires_at) return null
+    const diff = new Date(tenant.plan_expires_at).getTime() - Date.now()
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+  })()
 
   const loadProfile = async (userId: string) => {
     // Check superadmin first
@@ -95,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, tenant, session, loading, isSuperAdmin, signIn, signOut, refreshProfile, refreshTenant }}>
+    <AuthContext.Provider value={{ user, profile, tenant, session, loading, isSuperAdmin, isTrialExpired, trialDaysLeft, signIn, signOut, refreshProfile, refreshTenant }}>
       {children}
     </AuthContext.Provider>
   )

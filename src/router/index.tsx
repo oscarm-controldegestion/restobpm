@@ -3,6 +3,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import AppLayout from '@/components/layout/AppLayout'
 import SuperAdminLayout from '@/components/layout/SuperAdminLayout'
 import LoginPage from '@/pages/auth/LoginPage'
+import RegisterPage from '@/pages/auth/RegisterPage'
+import TrialExpired from '@/pages/auth/TrialExpired'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import UserManagement from '@/pages/admin/UserManagement'
 import SupervisorDashboard from '@/pages/supervisor/SupervisorDashboard'
@@ -19,7 +21,23 @@ import SAUsers from '@/pages/superadmin/SAUsers'
 import SAStats from '@/pages/superadmin/SAStats'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 
+/** Rutas normales: requieren sesión. Si trial expiró → /trial-expired
+ *  Excepción: /admin/subscription siempre está accesible (para poder pagar). */
 function ProtectedRoute({ children, allowedRoles }: { children: JSX.Element; allowedRoles?: string[] }) {
+  const { user, profile, loading, isTrialExpired } = useAuth()
+
+  if (loading) return <LoadingScreen />
+  if (!user || !profile) return <Navigate to="/login" replace />
+  if (allowedRoles && !allowedRoles.includes(profile.role)) {
+    return <Navigate to="/" replace />
+  }
+  if (isTrialExpired) return <Navigate to="/trial-expired" replace />
+  return children
+}
+
+/** Igual que ProtectedRoute pero permite el acceso aunque el trial esté vencido
+ *  (se usa para la página de suscripción). */
+function ProtectedRouteNoTrialBlock({ children, allowedRoles }: { children: JSX.Element; allowedRoles?: string[] }) {
   const { user, profile, loading } = useAuth()
 
   if (loading) return <LoadingScreen />
@@ -39,9 +57,10 @@ function SuperAdminRoute({ children }: { children: JSX.Element }) {
 }
 
 function RoleBasedHome() {
-  const { profile, isSuperAdmin } = useAuth()
+  const { profile, isSuperAdmin, isTrialExpired } = useAuth()
   if (isSuperAdmin) return <Navigate to="/superadmin/dashboard" replace />
   if (!profile) return <Navigate to="/login" replace />
+  if (isTrialExpired) return <Navigate to="/trial-expired" replace />
   switch (profile.role) {
     case 'admin':      return <Navigate to="/admin/dashboard" replace />
     case 'supervisor': return <Navigate to="/supervisor/dashboard" replace />
@@ -55,7 +74,9 @@ export default function AppRouter() {
     <BrowserRouter>
       <Routes>
         {/* ── Pública ── */}
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login"    element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/trial-expired" element={<TrialExpired />} />
 
         {/* ── Super Admin ── */}
         <Route path="/superadmin" element={<SuperAdminRoute><SuperAdminLayout /></SuperAdminRoute>}>
@@ -74,8 +95,8 @@ export default function AppRouter() {
           <Route path="admin/dashboard"  element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
           <Route path="admin/users"      element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
           <Route path="admin/settings"   element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
-          <Route path="admin/subscription" element={<ProtectedRoute allowedRoles={['admin']}><Subscription /></ProtectedRoute>} />
-          {/* Reports also accessible to admin */}
+          {/* Suscripción: accesible siempre (incluso con trial vencido) */}
+          <Route path="admin/subscription" element={<ProtectedRouteNoTrialBlock allowedRoles={['admin']}><Subscription /></ProtectedRouteNoTrialBlock>} />
           <Route path="admin/reports"    element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
 
           {/* Supervisor */}

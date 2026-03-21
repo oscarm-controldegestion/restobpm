@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
 
@@ -89,9 +89,17 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-6">
-            ¿Problemas para ingresar? Contacta al administrador de tu establecimiento.
-          </p>
+          <div className="mt-6 text-center space-y-2">
+            <p className="text-xs text-gray-400">
+              ¿Problemas para ingresar? Contacta al administrador de tu establecimiento.
+            </p>
+            <p className="text-sm text-gray-500">
+              ¿No tienes cuenta?{' '}
+              <Link to="/register" className="text-brand-700 hover:underline font-semibold">
+                Regístrate gratis — 3 días de prueba
+              </Link>
+            </p>
+          </div>
         </div>
 
         <p className="text-center text-white/30 text-xs mt-6">
