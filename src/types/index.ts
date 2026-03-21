@@ -3,7 +3,7 @@ export type UserRole = 'admin' | 'supervisor' | 'operator'
 
 export type EstablishmentType = 'restaurant' | 'industry' | 'casino' | 'bakery' | 'other'
 
-export type SubscriptionPlan = 'free' | 'basic' | 'pro' | 'enterprise'
+export type SubscriptionPlan = 'trial' | 'inicial' | 'total' | 'sucursales'
 
 // ─── TENANT (ESTABLISHMENT) ───────────────────────────────────────────────────
 export interface Tenant {
@@ -183,52 +183,102 @@ export interface DashboardStats {
 export interface PricingPlan {
   id: SubscriptionPlan
   name: string
-  price: number          // CLP/month
-  priceUSD: number
-  maxUsers: number
-  maxModules: number
+  price: number          // CLP/month (sin IVA)
+  maxOperators: number
+  maxSupervisors: number
+  maxBranches: number
+  maxModules: number     // -1 = todos
+  modules: string[]      // códigos de módulos incluidos
   features: string[]
+  addons?: string[]      // servicios a contratar adicionales
+  highlighted?: boolean
   stripePriceId?: string
 }
 
+export const BPM_MODULES_ALL = ['IF', 'IS', 'PM', 'CS', 'PF'] as const
+// IF = Infraestructura/Instalaciones
+// IS = Inocuidad de Superficies
+// PM = Personal y Manipuladores
+// CS = Cadena de Frío / Temperatura
+// PF = Proceso y Flujos productivos
+
 export const PRICING_PLANS: PricingPlan[] = [
   {
-    id: 'free',
-    name: 'Gratuito',
+    id: 'trial',
+    name: 'Demo',
     price: 0,
-    priceUSD: 0,
-    maxUsers: 3,
+    maxOperators: 1,
+    maxSupervisors: 0,
+    maxBranches: 1,
     maxModules: 2,
-    features: ['Módulo Temperatura', 'Módulo Higiene Personal', '3 usuarios', 'Exportar PDF básico'],
+    modules: ['CS', 'PM'],
+    features: [
+      '1 usuario operador',
+      'Módulos: Temperatura y Personal',
+      'Acceso limitado 30 días',
+      'Solo para evaluación',
+    ],
   },
   {
-    id: 'basic',
-    name: 'Básico',
-    price: 9990,
-    priceUSD: 10,
-    maxUsers: 10,
-    maxModules: 5,
-    features: ['5 módulos BPM completos', '10 usuarios', 'PDF con folio y firma digital', 'Alertas push', 'Soporte email'],
-    stripePriceId: 'price_basic_monthly',
+    id: 'inicial',
+    name: 'Cumplimiento Inicial',
+    price: 14990,
+    maxOperators: 2,
+    maxSupervisors: 1,
+    maxBranches: 1,
+    maxModules: 3,
+    modules: ['CS', 'PM', 'IS'],
+    features: [
+      '2 usuarios operadores',
+      '1 supervisor',
+      'Módulos: Temperatura, Personal e Inocuidad',
+      'Alertas push',
+      'Soporte web',
+    ],
+    stripePriceId: 'price_inicial_monthly',
   },
   {
-    id: 'pro',
-    name: 'Profesional',
-    price: 19990,
-    priceUSD: 20,
-    maxUsers: 30,
-    maxModules: 5,
-    features: ['Todo lo de Básico', '30 usuarios', 'Dashboard analytics avanzado', 'Simulacro SEREMI', 'Múltiples sucursales', 'Soporte prioritario'],
-    stripePriceId: 'price_pro_monthly',
+    id: 'total',
+    name: 'Cumplimiento Total',
+    price: 19900,
+    maxOperators: 8,
+    maxSupervisors: 2,
+    maxBranches: 1,
+    maxModules: -1,
+    modules: ['IF', 'IS', 'PM', 'CS', 'PF'],
+    features: [
+      'Hasta 10 usuarios (8 operadores + 2 supervisores)',
+      'Todos los módulos BPM',
+      'Alertas push',
+      'Soporte web',
+    ],
+    addons: [
+      'Asesoría en resolución sanitaria',
+      'Revisión de local (servicio a contratar)',
+    ],
+    highlighted: true,
+    stripePriceId: 'price_total_monthly',
   },
   {
-    id: 'enterprise',
-    name: 'Empresa',
-    price: 49990,
-    priceUSD: 50,
-    maxUsers: 999,
-    maxModules: 5,
-    features: ['Todo lo de Pro', 'Usuarios ilimitados', 'API access', 'Integración IoT temperatura', 'SLA garantizado', 'Onboarding dedicado'],
-    stripePriceId: 'price_enterprise_monthly',
+    id: 'sucursales',
+    name: 'Múltiples Sucursales',
+    price: 39900,
+    maxOperators: 8,
+    maxSupervisors: 2,
+    maxBranches: 5,
+    maxModules: -1,
+    modules: ['IF', 'IS', 'PM', 'CS', 'PF'],
+    features: [
+      'Todo lo de Cumplimiento Total',
+      'Hasta 5 sucursales',
+      'Gestión centralizada multi-local',
+      'Alertas push',
+      'Soporte web prioritario',
+    ],
+    addons: [
+      'Asesoría en resolución sanitaria',
+      'Revisión de local (servicio a contratar)',
+    ],
+    stripePriceId: 'price_sucursales_monthly',
   },
 ]

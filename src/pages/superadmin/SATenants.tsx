@@ -4,6 +4,11 @@ import { supabase } from '@/lib/supabase'
 import type { Tenant, SubscriptionPlan } from '@/types'
 
 const PLAN_BADGE: Record<string, string> = {
+  trial:      'text-gray-400 bg-gray-800 border border-gray-700',
+  inicial:    'text-blue-300 bg-blue-900/40 border border-blue-800',
+  total:      'text-indigo-300 bg-indigo-900/40 border border-indigo-800',
+  sucursales: 'text-amber-300 bg-amber-900/40 border border-amber-800',
+  // legado
   free:       'text-gray-400 bg-gray-800 border border-gray-700',
   basic:      'text-blue-300 bg-blue-900/40 border border-blue-800',
   pro:        'text-indigo-300 bg-indigo-900/40 border border-indigo-800',
@@ -11,11 +16,17 @@ const PLAN_BADGE: Record<string, string> = {
 }
 
 const PLAN_LABEL: Record<string, string> = {
-  free: 'Gratuito', basic: 'Básico', pro: 'Profesional', enterprise: 'Empresa',
+  trial: 'Demo', inicial: 'C. Inicial', total: 'C. Total', sucursales: 'Multi-local',
+  // legado
+  free: 'Demo', basic: 'C. Inicial', pro: 'C. Total', enterprise: 'Multi-local',
 }
 
 const TYPE_LABEL: Record<string, string> = {
   restaurant: 'Restaurante', industry: 'Industria', casino: 'Casino', bakery: 'Panadería', other: 'Otro',
+}
+
+const PLAN_OPTIONS: Record<string, string> = {
+  trial: 'Demo', inicial: 'Cumplimiento Inicial', total: 'Cumplimiento Total', sucursales: 'Múltiples Sucursales',
 }
 
 interface TenantWithUsers extends Tenant { userCount?: number }
@@ -28,7 +39,7 @@ export default function SATenants() {
   const [expanded, setExpanded]   = useState<string | null>(null)
   const [saving, setSaving]       = useState(false)
   const [form, setForm] = useState({
-    name: '', rut: '', address: '', phone: '', type: 'restaurant', plan: 'pro' as SubscriptionPlan,
+    name: '', rut: '', address: '', phone: '', type: 'restaurant', plan: 'total' as SubscriptionPlan,
   })
 
   useEffect(() => { loadTenants() }, [])
@@ -68,7 +79,7 @@ export default function SATenants() {
     if (!error && data) {
       setTenants(prev => [{ ...data, userCount: 0 }, ...prev])
       setShowForm(false)
-      setForm({ name: '', rut: '', address: '', phone: '', type: 'restaurant', plan: 'pro' })
+      setForm({ name: '', rut: '', address: '', phone: '', type: 'restaurant', plan: 'total' })
     }
     setSaving(false)
   }
@@ -126,7 +137,7 @@ export default function SATenants() {
               <label className="block text-xs font-medium text-gray-400 mb-1">Plan inicial</label>
               <select value={form.plan} onChange={e => setForm({ ...form, plan: e.target.value as SubscriptionPlan })}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                {Object.entries(PLAN_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                {Object.entries(PLAN_OPTIONS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
             <div className="sm:col-span-2 flex justify-end gap-3">
@@ -205,7 +216,7 @@ export default function SATenants() {
                         onChange={e => updatePlan(t.id, e.target.value as SubscriptionPlan)}
                         className="px-2.5 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       >
-                        {Object.entries(PLAN_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        {Object.entries(PLAN_OPTIONS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                       </select>
                     </div>
 

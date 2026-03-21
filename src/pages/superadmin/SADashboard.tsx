@@ -11,10 +11,20 @@ interface Stats {
 }
 
 const PLAN_COLOR: Record<string, string> = {
+  trial:      'text-gray-400  bg-gray-800',
+  inicial:    'text-blue-400  bg-blue-900/40',
+  total:      'text-indigo-400 bg-indigo-900/40',
+  sucursales: 'text-amber-400 bg-amber-900/40',
+  // legado
   free:       'text-gray-400  bg-gray-800',
   basic:      'text-blue-400  bg-blue-900/40',
   pro:        'text-indigo-400 bg-indigo-900/40',
   enterprise: 'text-amber-400 bg-amber-900/40',
+}
+
+const PLAN_LABEL: Record<string, string> = {
+  trial: 'Demo', inicial: 'C. Inicial', total: 'C. Total', sucursales: 'Multi-local',
+  free: 'Demo', basic: 'C. Inicial', pro: 'C. Total', enterprise: 'Multi-local',
 }
 
 export default function SADashboard() {
@@ -62,7 +72,7 @@ export default function SADashboard() {
           { label: 'Empresas totales',   value: stats!.totalTenants,  icon: Building2,   color: 'text-indigo-400' },
           { label: 'Empresas activas',   value: stats!.activeTenants, icon: CheckCircle2, color: 'text-green-400' },
           { label: 'Usuarios totales',   value: stats!.totalUsers,    icon: Users,        color: 'text-blue-400' },
-          { label: 'Plan Pro/Enterprise',value: (stats!.planBreakdown['pro'] ?? 0) + (stats!.planBreakdown['enterprise'] ?? 0), icon: TrendingUp, color: 'text-amber-400' },
+          { label: 'C. Total / Multi-local', value: (stats!.planBreakdown['total'] ?? 0) + (stats!.planBreakdown['sucursales'] ?? 0) + (stats!.planBreakdown['pro'] ?? 0) + (stats!.planBreakdown['enterprise'] ?? 0), icon: TrendingUp, color: 'text-amber-400' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-gray-800 rounded-xl p-5 border border-gray-700">
             <Icon size={20} className={`${color} mb-3`} />
@@ -82,10 +92,10 @@ export default function SADashboard() {
             <div className="space-y-2">{Array(4).fill(0).map((_,i) => <div key={i} className="h-8 bg-gray-700 rounded animate-pulse" />)}</div>
           ) : (
             <div className="space-y-2">
-              {['enterprise','pro','basic','free'].map(plan => {
+              {['sucursales','total','inicial','trial'].map(plan => {
                 const count = stats!.planBreakdown[plan] ?? 0
                 const pct = stats!.totalTenants > 0 ? Math.round(count / stats!.totalTenants * 100) : 0
-                const planLabel = { free: 'Gratuito', basic: 'Básico', pro: 'Profesional', enterprise: 'Empresa' }[plan] ?? plan
+                const planLabel = PLAN_LABEL[plan] ?? plan
                 return (
                   <div key={plan} className="flex items-center gap-3">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium min-w-[80px] text-center ${PLAN_COLOR[plan]}`}>{planLabel}</span>
@@ -117,8 +127,8 @@ export default function SADashboard() {
                     <p className="text-sm font-medium text-white">{t.name}</p>
                     <p className="text-xs text-gray-500">{new Date(t.created_at).toLocaleDateString('es-CL')}</p>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${PLAN_COLOR[t.plan] ?? PLAN_COLOR.free}`}>
-                    {{ free:'Gratis', basic:'Básico', pro:'Pro', enterprise:'Empresa' }[t.plan as string] ?? t.plan}
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${PLAN_COLOR[t.plan] ?? PLAN_COLOR.trial}`}>
+                    {PLAN_LABEL[t.plan as string] ?? t.plan}
                   </span>
                 </div>
               ))}
