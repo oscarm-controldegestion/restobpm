@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import AppLayout from '@/components/layout/AppLayout'
+import SuperAdminLayout from '@/components/layout/SuperAdminLayout'
 import LoginPage from '@/pages/auth/LoginPage'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import UserManagement from '@/pages/admin/UserManagement'
@@ -12,6 +13,10 @@ import NonConformities from '@/pages/supervisor/NonConformities'
 import Reports from '@/pages/supervisor/Reports'
 import Settings from '@/pages/admin/Settings'
 import Subscription from '@/pages/admin/Subscription'
+import SADashboard from '@/pages/superadmin/SADashboard'
+import SATenants from '@/pages/superadmin/SATenants'
+import SAUsers from '@/pages/superadmin/SAUsers'
+import SAStats from '@/pages/superadmin/SAStats'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 
 function ProtectedRoute({ children, allowedRoles }: { children: JSX.Element; allowedRoles?: string[] }) {
@@ -25,8 +30,17 @@ function ProtectedRoute({ children, allowedRoles }: { children: JSX.Element; all
   return children
 }
 
+function SuperAdminRoute({ children }: { children: JSX.Element }) {
+  const { user, isSuperAdmin, loading } = useAuth()
+  if (loading) return <LoadingScreen />
+  if (!user) return <Navigate to="/login" replace />
+  if (!isSuperAdmin) return <Navigate to="/" replace />
+  return children
+}
+
 function RoleBasedHome() {
-  const { profile } = useAuth()
+  const { profile, isSuperAdmin } = useAuth()
+  if (isSuperAdmin) return <Navigate to="/superadmin/dashboard" replace />
   if (!profile) return <Navigate to="/login" replace />
   switch (profile.role) {
     case 'admin':      return <Navigate to="/admin/dashboard" replace />
@@ -42,6 +56,15 @@ export default function AppRouter() {
       <Routes>
         {/* ── Pública ── */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* ── Super Admin ── */}
+        <Route path="/superadmin" element={<SuperAdminRoute><SuperAdminLayout /></SuperAdminRoute>}>
+          <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
+          <Route path="dashboard" element={<SADashboard />} />
+          <Route path="tenants"   element={<SATenants />} />
+          <Route path="users"     element={<SAUsers />} />
+          <Route path="stats"     element={<SAStats />} />
+        </Route>
 
         {/* ── App ── */}
         <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

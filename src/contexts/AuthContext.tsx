@@ -9,21 +9,32 @@ interface AuthContextType {
   tenant: Tenant | null
   session: Session | null
   loading: boolean
+  isSuperAdmin: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  refreshTenant: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser]       = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [tenant, setTenant]   = useState<Tenant | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser]             = useState<User | null>(null)
+  const [profile, setProfile]       = useState<Profile | null>(null)
+  const [tenant, setTenant]         = useState<Tenant | null>(null)
+  const [session, setSession]       = useState<Session | null>(null)
+  const [loading, setLoading]       = useState(true)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   const loadProfile = async (userId: string) => {
+    // Check superadmin first
+    const { data: sa } = await supabase
+      .from('superadmins')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle()
+    setIsSuperAdmin(!!sa)
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*, tenant:tenants(*)')
@@ -39,6 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) await loadProfile(user.id)
+  }
+
+  const refreshTenant = async () => {
+    if (!user) return
+    const { data } = await supabase.from('profiles').select('*, tenant:tenants(*)').eq('id', user.id).single()
+    if (data) setTenant(data.tenant as Tenant)
   }
 
   useEffect(() => {
@@ -57,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null)
         setTenant(null)
+        setIsSuperAdmin(false)
       }
     })
 
@@ -73,10 +91,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
     setProfile(null)
     setTenant(null)
+    setIsSuperAdmin(false)
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, tenant, session, loading, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, tenant, session, loading, isSuperAdmin, signIn, signOut, refreshProfile, refreshTenant }}>
       {children}
     </AuthContext.Provider>
   )
