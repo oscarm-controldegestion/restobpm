@@ -122,3 +122,6 @@ export const planColor: Record<string, string> = {
 
 export const formatCLP = (amount: number): string =>
   new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(amount)
+
+// ─── RE-EXPORT pricing plans ──────────────────────────────────────────────────
+export { PRICING_PLANS } from '@/types'

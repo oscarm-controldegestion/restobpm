@@ -1,26 +1,28 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, AlertTriangle, FileText,
-  Users, Settings, CreditCard, Home, X, LogOut, ChevronRight
+  Users, Settings, CreditCard, X, LogOut, ChevronRight,
+  ClipboardCheck, Bell
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface NavItem { label: string; path: string; icon: React.ElementType; roles: string[] }
 
 const NAV_ITEMS: NavItem[] = [
-  // Operator
-  { label: 'Mis Tareas', path: '/operator/home', icon: Home, roles: ['operator'] },
+  // ── Operator ──────────────────────────────────────────────
+  { label: 'Mis Planillas',    path: '/operator/planillas', icon: ClipboardCheck, roles: ['operator'] },
 
-  // Supervisor + Admin
-  { label: 'Dashboard', path: '/supervisor/dashboard', icon: LayoutDashboard, roles: ['supervisor', 'admin'] },
-  { label: 'Historial BPM', path: '/supervisor/history', icon: ClipboardList, roles: ['supervisor', 'admin'] },
+  // ── Supervisor + Admin ─────────────────────────────────────
+  { label: 'Planillas',        path: '/supervisor/planillas', icon: ClipboardCheck, roles: ['supervisor', 'admin'] },
+  { label: 'Dashboard BPM',    path: '/supervisor/dashboard', icon: LayoutDashboard, roles: ['supervisor', 'admin'] },
+  { label: 'Historial BPM',    path: '/supervisor/history',   icon: ClipboardList,   roles: ['supervisor', 'admin'] },
   { label: 'No Conformidades', path: '/supervisor/non-conformities', icon: AlertTriangle, roles: ['supervisor', 'admin'] },
-  { label: 'Reportes', path: '/supervisor/reports', icon: FileText, roles: ['supervisor', 'admin'] },
+  { label: 'Reportes',         path: '/supervisor/reports',   icon: FileText,        roles: ['supervisor', 'admin'] },
 
-  // Admin only
-  { label: 'Usuarios', path: '/admin/users', icon: Users, roles: ['admin'] },
-  { label: 'Configuración', path: '/admin/settings', icon: Settings, roles: ['admin'] },
-  { label: 'Suscripción', path: '/admin/subscription', icon: CreditCard, roles: ['admin'] },
+  // ── Admin only ─────────────────────────────────────────────
+  { label: 'Usuarios',         path: '/admin/users',          icon: Users,           roles: ['admin'] },
+  { label: 'Configuración',    path: '/admin/settings',       icon: Settings,        roles: ['admin'] },
+  { label: 'Suscripción',      path: '/admin/subscription',   icon: CreditCard,      roles: ['admin'] },
 ]
 
 export default function Sidebar({ onClose }: { onClose: () => void }) {
