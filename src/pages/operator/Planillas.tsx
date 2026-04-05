@@ -13,6 +13,7 @@ import {
 import PlanillaGrid from '@/components/planilla/PlanillaGrid'
 import ChecklistView from '@/components/planilla/ChecklistView'
 import HigieneManipuladoresView from '@/components/planilla/HigieneManipuladoresView'
+import RecepcionProductosView from '@/components/planilla/RecepcionProductosView'
 import type { PlanillaMonth, TimeSlot } from '@/types'
 
 const MONTH_NAMES = [
@@ -127,7 +128,8 @@ function PlanillaDetail({
   // Monthly checklist mode: all items have frequency='monthly'
   const isMonthlyChecklist = items.length > 0 && items.every(i => i.frequency === 'monthly')
   // Worker hygiene grid mode
-  const isWorkerHygiene = planillaMonth.template?.layout_type === 'worker_hygiene'
+  const isWorkerHygiene       = planillaMonth.template?.layout_type === 'worker_hygiene'
+  const isProductReception    = planillaMonth.template?.layout_type === 'product_reception'
 
   // Compliance indicators
   const totalCells  = compItems.length * daysInMonth
@@ -209,7 +211,9 @@ function PlanillaDetail({
         </div>
       )}
 
-      {isWorkerHygiene ? (
+      {isProductReception ? (
+        <RecepcionProductosView month={planillaMonth} readOnly={isReadonly} />
+      ) : isWorkerHygiene ? (
         <HigieneManipuladoresView
           monthId={planillaMonth.id}
           year={planillaMonth.year}

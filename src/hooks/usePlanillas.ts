@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import type {
   PlanillaTemplate, PlanillaItem, PlanillaMonth, PlanillaMonthItem,
   PlanillaEntry, PlanillaAlert, PlanillaValue, TimeSlot, Profile, Area,
-  PlanillaDocument, Worker, HigieneEntry, WorkerShift
+  PlanillaDocument, Worker, HigieneEntry, WorkerShift, ProductReceptionEntry, ReceptionEstado
 } from '@/types'
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -791,4 +791,91 @@ export function useHigieneEntries(monthId: string | null) {
   }, [monthId, tenant])
 
   return { entries, loading, getValue, setValue, reload: load }
+}
+
+// ── Product Reception entries ─────────────────────────────────────────────────
+export function useProductReception(monthId: string | null) {
+  const { tenant, profile } = useAuth()
+  const [entries, setEntries] = useState<ProductReceptionEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving,  setSaving]  = useState(false)
+
+  const load = useCallback(async () => {
+    if (!monthId || !tenant) { setLoading(false); return }
+    const { data } = await supabase
+      .from('product_reception_entries')
+      .select('*')
+      .eq('month_id', monthId)
+      .order('fecha_recepcion', { ascending: false })
+    setEntries((data ?? []) as ProductReceptionEntry[])
+    setLoading(false)
+  }, [monthId, tenant])
+
+  useEffect(() => { load() }, [load])
+
+  /** Upload a photo to Supabase Storage and return its public-ish URL */
+  const uploadPhoto = useCallback(async (file: File, tempId: string): Promise<string | null> => {
+    if (!tenant) return null
+    const ext  = file.name.split('.').pop() ?? 'jpg'
+    const path = `${tenant.id}/${tempId}.${ext}`
+    const { error } = await supabase.storage
+      .from('product-reception')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (error) { console.error('uploadPhoto:', error); return null }
+    const { data } = supabase.storage.from('product-reception').getPublicUrl(path)
+    return data.publicUrl
+  }, [tenant])
+
+  type NewEntry = Omit<ProductReceptionEntry, 'id' | 'tenant_id' | 'month_id' | 'created_by' | 'created_at' | 'updated_at'>
+
+  const addEntry = useCallback(async (
+    fields: NewEntry,
+    photoFile?: File | null
+  ): Promise<boolean> => {
+    if (!monthId || !tenant || !profile) return false
+    setSaving(true)
+    try {
+      const tempId = crypto.randomUUID()
+      let photo_url: string | null = null
+      let photo_taken_at: string | null = null
+      if (photoFile) {
+        photo_url = await uploadPhoto(photoFile, tempId)
+        photo_taken_at = new Date().toISOString()
+      }
+      const payload = {
+        ...fields,
+        id: tempId,
+        tenant_id: tenant.id,
+        month_id: monthId,
+        created_by: profile.id,
+        photo_url,
+        photo_taken_at,
+      }
+      const { error } = await supabase.from('product_reception_entries').insert(payload)
+      if (error) throw error
+      await load()
+      return true
+    } catch (e) {
+      console.error('addEntry:', e)
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }, [monthId, tenant, profile, uploadPhoto, load])
+
+  const deleteEntry = useCallback(async (id: string): Promise<boolean> => {
+    if (!tenant) return false
+    const entry = entries.find(e => e.id === id)
+    const { error } = await supabase.from('product_reception_entries').delete().eq('id', id)
+    if (error) return false
+    // remove photo from storage if exists
+    if (entry?.photo_url) {
+      const parts = entry.photo_url.split(`product-reception/`)
+      if (parts[1]) await supabase.storage.from('product-reception').remove([parts[1]])
+    }
+    setEntries(prev => prev.filter(e => e.id !== id))
+    return true
+  }, [tenant, entries])
+
+  return { entries, loading, saving, addEntry, deleteEntry, reload: load }
 }

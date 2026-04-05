@@ -28,6 +28,7 @@ import {
 import PlanillaGrid from '@/components/planilla/PlanillaGrid'
 import ChecklistView from '@/components/planilla/ChecklistView'
 import HigieneManipuladoresView from '@/components/planilla/HigieneManipuladoresView'
+import RecepcionProductosView from '@/components/planilla/RecepcionProductosView'
 import type { PlanillaMonth, PlanillaTemplate, PlanillaItem, PlanillaFrequency, PlanillaValueType, Area } from '@/types'
 
 const MONTH_NAMES = [
@@ -53,8 +54,9 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
   const { items, loading: loadingItems } = usePlanillaItemsForMonth(planillaMonth.id, planillaMonth.template_id)
   const { entryMap, tempMap, complianceMTMap, entries }   = usePlanillaEntries(planillaMonth.id)
 
-  const isMonthlyChecklist = items.length > 0 && items.every(i => i.frequency === 'monthly')
-  const isWorkerHygiene    = planillaMonth.template?.layout_type === 'worker_hygiene'
+  const isMonthlyChecklist  = items.length > 0 && items.every(i => i.frequency === 'monthly')
+  const isWorkerHygiene     = planillaMonth.template?.layout_type === 'worker_hygiene'
+  const isProductReception  = planillaMonth.template?.layout_type === 'product_reception'
 
   const totalCells  = items.filter(i => i.value_type === 'compliance').length
     * new Date(planillaMonth.year, planillaMonth.month, 0).getDate()
@@ -106,7 +108,9 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
         </div>
       )}
 
-      {isWorkerHygiene ? (
+      {isProductReception ? (
+        <RecepcionProductosView month={planillaMonth} readOnly={false} />
+      ) : isWorkerHygiene ? (
         <HigieneManipuladoresView
           monthId={planillaMonth.id}
           year={planillaMonth.year}

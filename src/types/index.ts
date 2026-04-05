@@ -284,7 +284,34 @@ export type AlertType         = 'not_started' | 'incomplete' | 'overdue'
 export type PlanillaValueType = 'compliance' | 'temperature' | 'compliance_mt'
 export type TimeSlot          = 'morning' | 'afternoon'
 
-export type PlanillaLayoutType = 'default' | 'worker_hygiene'
+export type PlanillaLayoutType = 'default' | 'worker_hygiene' | 'product_reception'
+
+export type ReceptionEstado = 'conforme' | 'no_conforme' | 'observacion'
+
+export interface ProductReceptionEntry {
+  id: string
+  tenant_id: string
+  month_id: string
+  fecha_recepcion: string         // ISO timestamptz
+  proveedor: string
+  producto: string
+  marca: string | null
+  cantidad: number | null
+  unidad: string
+  temperatura: number | null
+  temperatura_min: number | null
+  temperatura_max: number | null
+  fecha_vencimiento: string | null // ISO date
+  lote: string | null
+  estado: ReceptionEstado
+  observaciones: string | null
+  photo_url: string | null
+  photo_taken_at: string | null
+  recibido_por: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
 
 export interface PlanillaTemplate {
   id: string
