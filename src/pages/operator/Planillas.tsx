@@ -174,7 +174,9 @@ function PlanillaDetail({
             {planillaMonth.template?.name}
             {planillaMonth.label ? ` — ${planillaMonth.label}` : ''}
           </h2>
-          <p className="text-sm text-gray-500">{MONTH_NAMES[planillaMonth.month]} {planillaMonth.year}</p>
+          {!isMonthlyChecklist && (
+            <p className="text-sm text-gray-500">{MONTH_NAMES[planillaMonth.month]} {planillaMonth.year}</p>
+          )}
         </div>
         <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_CONFIG[planillaMonth.status].color}`}>
           {STATUS_CONFIG[planillaMonth.status].label}
@@ -282,6 +284,15 @@ export default function OperatorPlanillas() {
   // filterByCurrentUser=true → only shows planillas assigned to this operator
   const { months, loading: loadingMonths, reload } = usePlanillaMonths(year, month, true)
   const [selected, setSelected] = useState<PlanillaMonth | null>(null)
+
+  // Open a specific planilla when navigated from the Home dashboard
+  useEffect(() => {
+    const state = location.state as { selectedMonthId?: string } | null
+    if (state?.selectedMonthId && months.length > 0) {
+      const target = months.find(m => m.id === state.selectedMonthId)
+      if (target) setSelected(target)
+    }
+  }, [location.state, months])
 
   // Reset to list view whenever the sidebar navigates to this same route
   useEffect(() => { setSelected(null) }, [location.key])

@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, AlertTriangle, FileText,
   Users, Settings, CreditCard, X, LogOut, ChevronRight,
-  ClipboardCheck, Bell, ShieldCheck, FolderOpen
+  ClipboardCheck, Bell, ShieldCheck, FolderOpen, Home
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -10,6 +10,7 @@ interface NavItem { label: string; path: string; icon: React.ElementType; roles:
 
 const NAV_ITEMS: NavItem[] = [
   // ── Operator ──────────────────────────────────────────────
+  { label: 'Inicio',           path: '/operator/home',      icon: Home,           roles: ['operator'] },
   { label: 'Mis Planillas',    path: '/operator/planillas', icon: ClipboardCheck, roles: ['operator'] },
 
   // ── Supervisor + Admin ─────────────────────────────────────

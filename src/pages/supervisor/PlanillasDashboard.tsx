@@ -73,7 +73,9 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
             {planillaMonth.template?.name}
             {planillaMonth.label ? ` — ${planillaMonth.label}` : ''}
           </h2>
-          <p className="text-sm text-gray-500">{MONTH_NAMES[planillaMonth.month]} {planillaMonth.year}</p>
+          {!isMonthlyChecklist && (
+            <p className="text-sm text-gray-500">{MONTH_NAMES[planillaMonth.month]} {planillaMonth.year}</p>
+          )}
         </div>
         <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_CONFIG[planillaMonth.status].color}`}>
           {STATUS_CONFIG[planillaMonth.status].label}

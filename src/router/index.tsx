@@ -36,7 +36,7 @@ function RoleBasedHome() {
   switch (profile.role) {
     case 'admin':      return <Navigate to="/admin/dashboard" replace />
     case 'supervisor': return <Navigate to="/supervisor/planillas" replace />
-    case 'operator':   return <Navigate to="/operator/planillas" replace />
+    case 'operator':   return <Navigate to="/operator/home" replace />
     default:           return <Navigate to="/login" replace />
   }
 }
