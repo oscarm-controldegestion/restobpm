@@ -87,7 +87,7 @@ function PlanillaDetail({
 }) {
   const { profile } = useAuth()
   const { items, loading: loadingItems }             = usePlanillaItems(planillaMonth.template_id)
-  const { entryMap, tempMap, setValue, setNumericValue, setTempClosed, entries } = usePlanillaEntries(planillaMonth.id)
+  const { entryMap, tempMap, complianceMTMap, setValue, setNumericValue, setTempClosed, setComplianceMTValue, entries } = usePlanillaEntries(planillaMonth.id)
   const [showSign, setShowSign] = useState(false)
   const [signing, setSigning]   = useState(false)
   const [msg, setMsg]           = useState<{ ok: boolean; text: string } | null>(null)
@@ -109,10 +109,19 @@ function PlanillaDetail({
     }
   }
 
+  const handleSetCMT = async (itemId: string, day: number, slot: TimeSlot, value: import('@/types').PlanillaValue | null) => {
+    await setComplianceMTValue(itemId, day, slot, value)
+    if (planillaMonth.status === 'pending') {
+      await updateMonthStatus(planillaMonth.id, 'in_progress')
+    }
+  }
+
   const daysInMonth  = new Date(planillaMonth.year, planillaMonth.month, 0).getDate()
-  const compItems    = items.filter(i => i.value_type !== 'temperature')
+  const compItems    = items.filter(i => i.value_type === 'compliance')
   const tempItems    = items.filter(i => i.value_type === 'temperature')
-  const isTemperature = tempItems.length > 0 && compItems.length === 0
+  const cmtItems     = items.filter(i => i.value_type === 'compliance_mt')
+  const isTemperature = tempItems.length > 0 && compItems.length === 0 && cmtItems.length === 0
+  const isComplianceMT = cmtItems.length > 0 && compItems.length === 0 && tempItems.length === 0
 
   // Compliance indicators
   const totalCells  = compItems.length * daysInMonth
@@ -121,10 +130,20 @@ function PlanillaDetail({
   const compliance  = filledCells > 0 ? Math.round((cCells / filledCells) * 100) : 0
 
   // Temperature indicators (each item × 2 slots × days)
+  const tempItemIds     = new Set(tempItems.map(i => i.id))
   const totalTempCells  = tempItems.length * 2 * daysInMonth
-  const filledTempCells = entries.filter(e => e.time_slot !== null && (e.numeric_value !== null || e.value === 'C')).length
+  const filledTempCells = entries.filter(e => e.time_slot !== null && tempItemIds.has(e.item_id) && (e.numeric_value !== null || e.value === 'C')).length
   const tempCompliance  = totalTempCells > 0 ? Math.round((filledTempCells / totalTempCells) * 100) : 0
   const emptyTempCells  = totalTempCells - filledTempCells
+
+  // Compliance M/T indicators (each item × 2 slots × days)
+  const cmtItemIds       = new Set(cmtItems.map(i => i.id))
+  const totalCMTCells    = cmtItems.length * 2 * daysInMonth
+  const cmtEntries       = entries.filter(e => e.time_slot !== null && cmtItemIds.has(e.item_id) && e.value !== null)
+  const filledCMTCells   = cmtEntries.length
+  const cmtCumple        = cmtEntries.filter(e => e.value === 'C' || e.value === 'CL').length
+  const cmtCompliance    = filledCMTCells > 0 ? Math.round((cmtCumple / filledCMTCells) * 100) : 0
+  const cmtNC            = cmtEntries.filter(e => e.value === 'NC').length
 
   const handleSign = async (signature: string) => {
     if (!profile) return
@@ -156,12 +175,16 @@ function PlanillaDetail({
         </span>
       </div>
 
-      {(totalCells > 0 || totalTempCells > 0) && (
+      {(totalCells > 0 || totalTempCells > 0 || totalCMTCells > 0) && (
         <div className="grid grid-cols-3 gap-3">
           {(isTemperature ? [
             { label: 'Completadas', value: `${filledTempCells}/${totalTempCells}`, color: 'text-blue-600' },
             { label: 'Cumplimiento', value: `${tempCompliance}%`, color: tempCompliance >= 80 ? 'text-green-600' : tempCompliance >= 50 ? 'text-amber-600' : 'text-red-600' },
             { label: 'Sin Registro', value: emptyTempCells, color: 'text-red-600' },
+          ] : isComplianceMT ? [
+            { label: 'Completadas', value: `${filledCMTCells}/${totalCMTCells}`, color: 'text-blue-600' },
+            { label: 'Cumplimiento', value: `${cmtCompliance}%`, color: cmtCompliance >= 80 ? 'text-green-600' : cmtCompliance >= 50 ? 'text-amber-600' : 'text-red-600' },
+            { label: 'No Cumple', value: cmtNC, color: 'text-red-600' },
           ] : [
             { label: 'Completadas', value: `${filledCells}/${totalCells}`, color: 'text-blue-600' },
             { label: 'Cumplimiento', value: `${compliance}%`, color: compliance >= 80 ? 'text-green-600' : compliance >= 50 ? 'text-amber-600' : 'text-red-600' },
@@ -180,15 +203,19 @@ function PlanillaDetail({
         items={items}
         entryMap={entryMap}
         tempMap={tempMap}
+        complianceMTMap={complianceMTMap}
         onSetValue={handleSetValue}
         onSetNumericValue={handleSetNumeric}
         onMarkTempClosed={(itemId, day, slot) => setTempClosed(itemId, day, slot)}
+        onSetComplianceMTValue={handleSetCMT}
         readonly={isReadonly}
       />
 
       <p className="text-xs text-gray-400 text-center">
         {isTemperature
           ? 'Toca la celda M (mañana) o T (tarde) e ingresa los grados °C. Usa "Cerrado" si el establecimiento no abre ese día.'
+          : isComplianceMT
+          ? <>Toca cada celda para ciclar: <strong>C</strong> (Cumple) → <strong>NC</strong> (No Cumple) → <strong>C</strong> (Cerrado) → vacío</>
           : <>Toca cada celda para ciclar: <strong>C</strong> (Cumple) → <strong>NC</strong> (No Cumple) → <strong>NA</strong> (No Aplica) → vacío</>
         }
       </p>

@@ -47,12 +47,12 @@ const ALERT_TYPE_CONFIG = {
 // ── Read-only detail view ─────────────────────────────────────────────────────
 function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMonth; onBack: () => void }) {
   const { items, loading: loadingItems } = usePlanillaItems(planillaMonth.template_id)
-  const { entryMap, tempMap, entries }   = usePlanillaEntries(planillaMonth.id)
+  const { entryMap, tempMap, complianceMTMap, entries }   = usePlanillaEntries(planillaMonth.id)
 
   const totalCells  = items.filter(i => i.value_type === 'compliance').length
     * new Date(planillaMonth.year, planillaMonth.month, 0).getDate()
-  const filledCells = entries.filter(e => e.value !== null).length
-  const cCells      = entries.filter(e => e.value === 'C').length
+  const filledCells = entries.filter(e => e.value !== null && e.time_slot === null).length
+  const cCells      = entries.filter(e => e.value === 'C' && e.time_slot === null).length
   const compliance  = filledCells > 0 ? Math.round((cCells / filledCells) * 100) : 0
 
   if (loadingItems) return <div className="flex items-center justify-center py-20 text-gray-400">Cargando…</div>
@@ -99,6 +99,7 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
         items={items}
         entryMap={entryMap}
         tempMap={tempMap}
+        complianceMTMap={complianceMTMap}
         onSetValue={() => {}}
         readonly
       />
@@ -183,8 +184,8 @@ function ItemFormModal({
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Tipo de valor</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['compliance', 'temperature'] as PlanillaValueType[]).map(vt => (
+            <div className="grid grid-cols-3 gap-2">
+              {(['compliance', 'temperature', 'compliance_mt'] as PlanillaValueType[]).map(vt => (
                 <button
                   key={vt}
                   onClick={() => setValueType(vt)}
@@ -194,13 +195,16 @@ function ItemFormModal({
                       : 'border-gray-300 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  {vt === 'compliance' ? <ClipboardCheck size={15} /> : <Thermometer size={15} />}
-                  {vt === 'compliance' ? 'C / NC / NA' : 'Temperatura °C'}
+                  {vt === 'compliance' ? <ClipboardCheck size={15} /> : vt === 'temperature' ? <Thermometer size={15} /> : <ClipboardCheck size={15} />}
+                  {vt === 'compliance' ? 'C / NC / NA' : vt === 'temperature' ? 'Temperatura °C' : 'C / NC (M/T)'}
                 </button>
               ))}
             </div>
             {valueType === 'temperature' && (
               <p className="text-xs text-blue-600 mt-1.5">Se registran lecturas de mañana y tarde en grados °C (puede ser negativo)</p>
+            )}
+            {valueType === 'compliance_mt' && (
+              <p className="text-xs text-blue-600 mt-1.5">Cumple / No Cumple con registro mañana y tarde. Incluye opción Cerrado.</p>
             )}
           </div>
           <div>
@@ -276,7 +280,7 @@ function ItemConfigPanel({ template }: { template: PlanillaTemplate }) {
               key={item.id}
               className={`flex items-center gap-3 px-4 py-3 ${idx < items.length - 1 ? 'border-b border-gray-50' : ''} ${!item.active ? 'opacity-50' : ''}`}
             >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${item.value_type === 'temperature' ? 'bg-blue-50' : 'bg-green-50'}`}>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${item.value_type === 'temperature' ? 'bg-blue-50' : item.value_type === 'compliance_mt' ? 'bg-purple-50' : 'bg-green-50'}`}>
                 {item.value_type === 'temperature'
                   ? <Thermometer size={13} className="text-blue-600" />
                   : <ClipboardCheck size={13} className="text-green-600" />}
@@ -286,7 +290,7 @@ function ItemConfigPanel({ template }: { template: PlanillaTemplate }) {
                   {item.equipment_number ? `#${item.equipment_number} — ` : ''}{item.name}
                 </p>
                 <p className="text-xs text-gray-400">
-                  {item.value_type === 'temperature' ? 'Temperatura °C (M/T)' : 'C/NC/NA'} · {item.frequency === 'daily' ? 'Diaria' : item.frequency === 'weekly' ? 'Semanal' : 'Mensual'}
+                  {item.value_type === 'temperature' ? 'Temperatura °C (M/T)' : item.value_type === 'compliance_mt' ? 'C/NC (M/T)' : 'C/NC/NA'} · {item.frequency === 'daily' ? 'Diaria' : item.frequency === 'weekly' ? 'Semanal' : 'Mensual'}
                   {!item.active ? ' · Inactivo' : ''}
                 </p>
               </div>

@@ -15,6 +15,19 @@ const VALUE_STYLE: Record<string, string> = {
   NA: 'bg-gray-300 text-gray-600 font-bold',
 }
 
+// Compliance M/T cycle: null → C (Cumple) → NC (No Cumple) → CL (Cerrado) → null
+const CMT_CYCLE: (PlanillaValue | null)[] = [null, 'C', 'NC', 'CL']
+const CMT_STYLE: Record<string, string> = {
+  C:  'bg-green-500 text-white font-bold',
+  NC: 'bg-red-500 text-white font-bold',
+  CL: 'bg-green-100 text-green-700 font-bold border border-green-300',
+}
+const CMT_LABEL: Record<string, string> = {
+  C: 'C',
+  NC: 'NC',
+  CL: 'C',  // Cerrado shows as "C"
+}
+
 function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate()
 }
@@ -93,11 +106,11 @@ function TempCell({ value, onSave, onMarkClosed, readonly, isPast, isFuture, isT
       <div
         onClick={startEdit}
         title={!readonly && !isFuture ? 'Cerrado — toca para editar' : 'Cerrado'}
-        className={`w-12 h-7 rounded flex items-center justify-center text-[10px] font-bold leading-none transition-colors
+        className={`w-12 h-7 rounded flex items-center justify-center text-xs font-bold leading-none transition-colors
           bg-green-100 text-green-700 border border-green-300
           ${!readonly && !isFuture ? 'cursor-pointer hover:ring-2 hover:ring-green-400' : 'cursor-default'}`}
       >
-        Cerr.
+        C
       </div>
     )
   }
@@ -128,15 +141,17 @@ interface Props {
   items: PlanillaItem[]
   entryMap: (itemId: string, day: number) => PlanillaValue | null
   tempMap: (itemId: string, day: number, slot: TimeSlot) => number | 'C' | null
+  complianceMTMap?: (itemId: string, day: number, slot: TimeSlot) => PlanillaValue | null
   onSetValue: (itemId: string, day: number, value: PlanillaValue | null) => void
   onSetNumericValue?: (itemId: string, day: number, slot: TimeSlot, value: number | null) => void
   onMarkTempClosed?: (itemId: string, day: number, slot: TimeSlot) => void
+  onSetComplianceMTValue?: (itemId: string, day: number, slot: TimeSlot, value: PlanillaValue | null) => void
   readonly?: boolean
 }
 
 // ── Grid ──────────────────────────────────────────────────────────────────────
 export default function PlanillaGrid({
-  planillaMonth, items, entryMap, tempMap, onSetValue, onSetNumericValue, onMarkTempClosed, readonly
+  planillaMonth, items, entryMap, tempMap, complianceMTMap, onSetValue, onSetNumericValue, onMarkTempClosed, onSetComplianceMTValue, readonly
 }: Props) {
   const { year, month } = planillaMonth
   const today           = new Date()
@@ -145,8 +160,9 @@ export default function PlanillaGrid({
   const totalDays       = daysInMonth(year, month)
   const days            = Array.from({ length: totalDays }, (_, i) => i + 1)
 
-  const hasTemp       = items.some(i => i.value_type === 'temperature')
-  const hasCompliance = items.some(i => i.value_type !== 'temperature')
+  const hasTemp         = items.some(i => i.value_type === 'temperature')
+  const hasCompliance   = items.some(i => i.value_type === 'compliance')
+  const hasComplianceMT = items.some(i => i.value_type === 'compliance_mt')
 
   const handleTap = useCallback((itemId: string, day: number, current: PlanillaValue | null) => {
     if (readonly) return
@@ -154,6 +170,13 @@ export default function PlanillaGrid({
     const next = VALUE_CYCLE[(idx + 1) % VALUE_CYCLE.length]
     onSetValue(itemId, day, next)
   }, [onSetValue, readonly])
+
+  const handleCMTTap = useCallback((itemId: string, day: number, slot: TimeSlot, current: PlanillaValue | null) => {
+    if (readonly) return
+    const idx  = CMT_CYCLE.indexOf(current)
+    const next = CMT_CYCLE[(idx + 1) % CMT_CYCLE.length]
+    onSetComplianceMTValue?.(itemId, day, slot, next)
+  }, [onSetComplianceMTValue, readonly])
 
   const itemCompliance = useCallback((item: PlanillaItem) => {
     let c = 0, filled = 0
@@ -293,6 +316,100 @@ export default function PlanillaGrid({
               )
             }
 
+            // ── Compliance M/T item → 2 rows (M and T) with C/NC/CL ──────
+            if (item.value_type === 'compliance_mt') {
+              const cmtMapFn = complianceMTMap ?? (() => null)
+              const mFilled  = days.filter(d => cmtMapFn(item.id, d, 'morning') !== null).length
+              const tFilled  = days.filter(d => cmtMapFn(item.id, d, 'afternoon') !== null).length
+              const itemLabel = `${item.equipment_number ? `#${item.equipment_number} — ` : ''}${item.name}`
+
+              return (
+                <>
+                  {/* Mañana row */}
+                  <tr key={`${item.id}-m`} className={bg}>
+                    <td className={`sticky left-0 z-10 border-r border-gray-200 px-2 py-1.5 ${bg}`}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-600 text-white text-[11px] font-extrabold shadow-sm">
+                          M
+                        </span>
+                        <span className="truncate font-semibold text-gray-800 text-xs">{itemLabel}</span>
+                      </div>
+                    </td>
+                    <td className={`text-center border-r border-gray-200 font-bold ${FREQ_COLOR[item.frequency]}`}>
+                      {FREQ_LABEL[item.frequency]}
+                    </td>
+                    {days.map(d => {
+                      const val    = cmtMapFn(item.id, d, 'morning')
+                      const isPast   = isCurrentMonth ? d < currentDay : year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth() + 1)
+                      const isFuture = isCurrentMonth && d > currentDay
+                      return (
+                        <td
+                          key={d}
+                          onClick={() => !readonly && !isFuture && handleCMTTap(item.id, d, 'morning', val)}
+                          className={`border-r border-gray-100 text-center select-none transition-colors ${
+                            !readonly && !isFuture ? 'cursor-pointer' : 'cursor-default'
+                          } ${d === currentDay ? 'bg-amber-50/40' : ''}`}
+                        >
+                          <div className={`mx-auto w-9 h-7 rounded flex items-center justify-center text-xs ${
+                            val ? CMT_STYLE[val]
+                                : isPast ? 'bg-red-50 text-red-300 border border-red-100'
+                                : 'bg-gray-100 text-gray-300'
+                          }`}>
+                            {val ? CMT_LABEL[val] : (isPast ? '—' : '')}
+                          </div>
+                        </td>
+                      )
+                    })}
+                    <td className="text-center px-1 py-1 border-l border-gray-200 bg-gray-50 whitespace-nowrap">
+                      <span className={`font-bold text-xs ${mFilled >= days.length ? 'text-green-600' : mFilled > 0 ? 'text-amber-600' : 'text-red-400'}`}>
+                        {mFilled}/{days.length}
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* Tarde row */}
+                  <tr key={`${item.id}-t`} className={`${bg} border-b-2 border-gray-200`}>
+                    <td className={`sticky left-0 z-10 border-r border-gray-200 px-2 py-1.5 ${bg}`}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-orange-500 text-white text-[11px] font-extrabold shadow-sm">
+                          T
+                        </span>
+                        <span className="truncate text-gray-500 italic text-xs">{itemLabel}</span>
+                      </div>
+                    </td>
+                    <td className="text-center border-r border-gray-200 text-gray-300">—</td>
+                    {days.map(d => {
+                      const val    = cmtMapFn(item.id, d, 'afternoon')
+                      const isPast   = isCurrentMonth ? d < currentDay : year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth() + 1)
+                      const isFuture = isCurrentMonth && d > currentDay
+                      return (
+                        <td
+                          key={d}
+                          onClick={() => !readonly && !isFuture && handleCMTTap(item.id, d, 'afternoon', val)}
+                          className={`border-r border-gray-100 text-center select-none transition-colors ${
+                            !readonly && !isFuture ? 'cursor-pointer' : 'cursor-default'
+                          } ${d === currentDay ? 'bg-amber-50/40' : ''}`}
+                        >
+                          <div className={`mx-auto w-9 h-7 rounded flex items-center justify-center text-xs ${
+                            val ? CMT_STYLE[val]
+                                : isPast ? 'bg-red-50 text-red-300 border border-red-100'
+                                : 'bg-gray-100 text-gray-300'
+                          }`}>
+                            {val ? CMT_LABEL[val] : (isPast ? '—' : '')}
+                          </div>
+                        </td>
+                      )
+                    })}
+                    <td className="text-center px-1 py-1 border-l border-gray-200 bg-gray-50 whitespace-nowrap">
+                      <span className={`font-bold text-xs ${tFilled >= days.length ? 'text-green-600' : tFilled > 0 ? 'text-amber-600' : 'text-red-400'}`}>
+                        {tFilled}/{days.length}
+                      </span>
+                    </td>
+                  </tr>
+                </>
+              )
+            }
+
             // ── Compliance row (C / NC / NA) ──────────────────────────────
             const stats = itemCompliance(item)
             const pct   = stats.filled > 0 ? Math.round((stats.c / stats.filled) * 100) : null
@@ -384,6 +501,31 @@ export default function PlanillaGrid({
                     <div className="flex items-center gap-1.5">
                       <span className="inline-block w-5 h-4 rounded bg-gray-300 shrink-0" />
                       <span>No Aplica</span>
+                    </div>
+                  </>
+                )}
+                {hasComplianceMT && (
+                  <>
+                    {(hasTemp || hasCompliance) && <div className="col-span-2 border-t border-gray-200 pt-1 mt-0.5 font-semibold text-gray-700">Revisión (C/NC + Cerrado)</div>}
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-600 text-white text-[10px] font-bold shrink-0">M</span>
+                      <span>Mañana</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-orange-500 text-white text-[10px] font-bold shrink-0">T</span>
+                      <span>Tarde</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-5 h-4 rounded bg-green-500 shrink-0" />
+                      <span>Cumple</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-5 h-4 rounded bg-red-500 shrink-0" />
+                      <span>No Cumple</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-5 h-4 rounded bg-green-100 border border-green-300 shrink-0" />
+                      <span>Cerrado</span>
                     </div>
                   </>
                 )}

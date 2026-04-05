@@ -226,12 +226,78 @@ export function usePlanillaEntries(monthId: string | null) {
   }, [entries])
 
   // Lookup: temperature entry by slot
-  const tempMap = useCallback((itemId: string, day: number, timeSlot: TimeSlot): number | null => {
+  // Returns: number (temperature) | 'C' (closed – cerrado) | null (no entry)
+  const tempMap = useCallback((itemId: string, day: number, timeSlot: TimeSlot): number | 'C' | null => {
     const e = entries.find(e => e.item_id === itemId && e.day === day && e.time_slot === timeSlot)
-    return e?.numeric_value ?? null
+    if (!e) return null
+    if (e.value === 'C') return 'C'
+    return e.numeric_value ?? null
   }, [entries])
 
-  return { entries, loading, setValue, setNumericValue, entryMap, tempMap, reload: load }
+  // Mark a temperature slot as "Cerrado" (closed day – counts as compliant)
+  const setTempClosed = useCallback(async (itemId: string, day: number, timeSlot: TimeSlot) => {
+    if (!monthId || !profile) return
+    await supabase.from('planilla_entries').upsert(
+      {
+        month_id: monthId, item_id: itemId, day,
+        value: 'C', time_slot: timeSlot, numeric_value: null,
+        updated_by: profile.id, updated_at: new Date().toISOString()
+      },
+      { onConflict: 'month_id,item_id,day,time_slot' }
+    )
+    setEntries(prev => {
+      const idx = prev.findIndex(e => e.item_id === itemId && e.day === day && e.time_slot === timeSlot)
+      const updated: PlanillaEntry = {
+        id: idx >= 0 ? prev[idx].id : `${monthId}-${itemId}-${day}-${timeSlot}`,
+        month_id: monthId, item_id: itemId, day,
+        value: 'C', time_slot: timeSlot, numeric_value: null,
+        updated_at: new Date().toISOString(), updated_by: profile.id
+      }
+      if (idx >= 0) {
+        const next = [...prev]; next[idx] = updated; return next
+      }
+      return [...prev, updated]
+    })
+  }, [monthId, profile])
+
+  // Upsert a compliance_mt cell (C/NC/CL with time slot for morning/afternoon)
+  const setComplianceMTValue = useCallback(async (
+    itemId: string,
+    day: number,
+    timeSlot: TimeSlot,
+    value: PlanillaValue | null
+  ) => {
+    if (!monthId || !profile) return
+    await supabase.from('planilla_entries').upsert(
+      {
+        month_id: monthId, item_id: itemId, day,
+        value, time_slot: timeSlot, numeric_value: null,
+        updated_by: profile.id, updated_at: new Date().toISOString()
+      },
+      { onConflict: 'month_id,item_id,day,time_slot' }
+    )
+    setEntries(prev => {
+      const idx = prev.findIndex(e => e.item_id === itemId && e.day === day && e.time_slot === timeSlot)
+      const updated: PlanillaEntry = {
+        id: idx >= 0 ? prev[idx].id : `${monthId}-${itemId}-${day}-${timeSlot}`,
+        month_id: monthId, item_id: itemId, day,
+        value, time_slot: timeSlot, numeric_value: null,
+        updated_at: new Date().toISOString(), updated_by: profile.id
+      }
+      if (idx >= 0) {
+        const next = [...prev]; next[idx] = updated; return next
+      }
+      return [...prev, updated]
+    })
+  }, [monthId, profile])
+
+  // Lookup: compliance_mt entry by slot (returns PlanillaValue or null)
+  const complianceMTMap = useCallback((itemId: string, day: number, slot: TimeSlot): PlanillaValue | null => {
+    const e = entries.find(e => e.item_id === itemId && e.day === day && e.time_slot === slot)
+    return (e?.value as PlanillaValue) ?? null
+  }, [entries])
+
+  return { entries, loading, setValue, setNumericValue, setTempClosed, setComplianceMTValue, entryMap, tempMap, complianceMTMap, reload: load }
 }
 
 // ── Alerts ────────────────────────────────────────────────────────────────────

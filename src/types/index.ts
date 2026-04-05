@@ -295,10 +295,10 @@ export interface Area {
 
 // ─── PLANILLA TYPES ───────────────────────────────────────────────────────────
 export type PlanillaFrequency = 'daily' | 'weekly' | 'monthly'
-export type PlanillaValue     = 'C' | 'NC' | 'NA'
+export type PlanillaValue     = 'C' | 'NC' | 'NA' | 'CL'
 export type PlanillaStatus    = 'pending' | 'in_progress' | 'completed' | 'signed'
 export type AlertType         = 'not_started' | 'incomplete' | 'overdue'
-export type PlanillaValueType = 'compliance' | 'temperature'
+export type PlanillaValueType = 'compliance' | 'temperature' | 'compliance_mt'
 export type TimeSlot          = 'morning' | 'afternoon'
 
 export interface PlanillaTemplate {
