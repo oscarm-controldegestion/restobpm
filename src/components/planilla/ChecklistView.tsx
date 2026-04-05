@@ -26,8 +26,8 @@ function ValueBtn({
       className={`
         px-3 py-1 rounded text-xs font-bold border transition-all
         ${active
-          ? `${color} text-white border-transparent`
-          : 'bg-transparent border-gray-600 text-gray-400 hover:border-gray-400'
+          ? `${color} text-white border-transparent shadow-sm`
+          : 'bg-white border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700'
         }
       `}
     >
@@ -42,19 +42,19 @@ function DocBadge({
 }: { doc: PlanillaDocument; onDelete: () => void; canDelete: boolean }) {
   const isPDF = doc.file_type === 'pdf'
   return (
-    <div className="flex items-center gap-1 bg-gray-700 rounded px-2 py-1 text-xs max-w-[200px]">
+    <div className="flex items-center gap-1 bg-gray-100 border border-gray-200 rounded px-2 py-1 text-xs max-w-[200px]">
       {isPDF
-        ? <FileText className="w-3 h-3 text-red-400 flex-shrink-0" />
-        : <ImageIcon className="w-3 h-3 text-blue-400 flex-shrink-0" />
+        ? <FileText className="w-3 h-3 text-red-500 flex-shrink-0" />
+        : <ImageIcon className="w-3 h-3 text-blue-500 flex-shrink-0" />
       }
-      <span className="truncate text-gray-300 max-w-[100px]" title={doc.file_name}>
+      <span className="truncate text-gray-600 max-w-[100px]" title={doc.file_name}>
         {doc.file_name}
       </span>
       <a
         href={doc.file_url}
         target="_blank"
         rel="noreferrer"
-        className="text-blue-400 hover:text-blue-300 flex-shrink-0"
+        className="text-blue-500 hover:text-blue-700 flex-shrink-0"
         title="Ver archivo"
       >
         <ExternalLink className="w-3 h-3" />
@@ -62,7 +62,7 @@ function DocBadge({
       {canDelete && (
         <button
           onClick={onDelete}
-          className="text-red-400 hover:text-red-300 flex-shrink-0"
+          className="text-red-400 hover:text-red-600 flex-shrink-0"
           title="Eliminar"
         >
           <Trash2 className="w-3 h-3" />
@@ -87,7 +87,7 @@ export default function ChecklistView({
   const { documents, loading: docsLoading, uploadDocument, deleteDocument, getDocForItem } =
     usePlanillaDocuments(monthId)
 
-  const [uploading, setUploading] = useState<string | null>(null) // itemId being uploaded
+  const [uploading, setUploading] = useState<string | null>(null)
   const fileInputRef  = useRef<HTMLInputElement>(null)
   const pendingItemId = useRef<string | null>(null)
 
@@ -104,7 +104,6 @@ export default function ChecklistView({
     setValue(itemId, 1, current === val ? null : val)
   }
 
-  // File input trigger for a specific item
   const handleUploadClick = (itemId: string) => {
     if (readOnly) return
     pendingItemId.current = itemId
@@ -120,15 +119,12 @@ export default function ChecklistView({
     await uploadDocument(itemId, file)
     setUploading(null)
     pendingItemId.current = null
-    // Reset input so same file can be re-uploaded
     e.target.value = ''
   }
 
   const handleDeleteDoc = async (doc: PlanillaDocument) => {
-    // Reconstruct the storage path from the URL
-    // URL format: .../object/public/planilla-docs/{tenant_id}/{month_id}/{itemId}.{ext}
-    const url  = doc.file_url
-    const idx  = url.indexOf('planilla-docs/')
+    const url = doc.file_url
+    const idx = url.indexOf('planilla-docs/')
     if (idx < 0) return
     const filePath = url.slice(idx + 'planilla-docs/'.length)
     await deleteDocument(doc.id, filePath)
@@ -144,7 +140,7 @@ export default function ChecklistView({
   }
 
   return (
-    <div className="divide-y divide-gray-700">
+    <div className="divide-y divide-gray-100">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -155,49 +151,63 @@ export default function ChecklistView({
       />
 
       {items.map((item, idx) => {
-        const val    = getValue(item.id)
-        const doc    = getDocForItem(item.id)
+        const val         = getValue(item.id)
+        const doc         = getDocForItem(item.id)
         const isUploading = uploading === item.id
+
+        // Subtle row tint based on compliance value
+        const rowBg =
+          val === 'C'  ? 'bg-green-50'  :
+          val === 'NC' ? 'bg-red-50'    :
+          val === 'NA' ? 'bg-gray-50'   : 'bg-white'
 
         return (
           <div
             key={item.id}
-            className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 px-1"
+            className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 px-3 rounded-lg transition-colors ${rowBg}`}
           >
             {/* Row number + name */}
             <div className="flex items-start gap-2 flex-1 min-w-0">
-              <span className="text-gray-500 text-xs w-5 pt-1 flex-shrink-0">{idx + 1}.</span>
-              <span className="text-sm text-gray-200 break-words">{item.name}</span>
+              <span className="text-gray-400 text-xs w-5 pt-0.5 flex-shrink-0 font-mono">{idx + 1}.</span>
+              <span className={`text-sm break-words font-medium ${
+                val === 'C'  ? 'text-green-800' :
+                val === 'NC' ? 'text-red-800'   :
+                val === 'NA' ? 'text-gray-400'  : 'text-gray-700'
+              }`}>
+                {item.name ?? (item as any).label}
+              </span>
             </div>
 
             {/* Controls */}
             <div className="flex items-center gap-2 flex-shrink-0 flex-wrap pl-7 sm:pl-0">
-              {/* C / NC / NA toggles */}
-              <ValueBtn
-                label="C"
-                active={val === 'C'}
-                color="bg-green-600"
-                onClick={() => handleValue(item.id, 'C')}
-              />
-              <ValueBtn
-                label="NC"
-                active={val === 'NC'}
-                color="bg-red-600"
-                onClick={() => handleValue(item.id, 'NC')}
-              />
-              <ValueBtn
-                label="NA"
-                active={val === 'NA'}
-                color="bg-gray-500"
-                onClick={() => handleValue(item.id, 'NA')}
-              />
 
-              {/* Status icon */}
-              {val === 'C'  && <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />}
-              {val === 'NC' && <XCircle     className="w-4 h-4 text-red-500   flex-shrink-0" />}
-              {val === 'NA' && <MinusCircle className="w-4 h-4 text-gray-500  flex-shrink-0" />}
+              {/* Editable: C / NC / NA toggles */}
+              {!readOnly && (
+                <>
+                  <ValueBtn label="C"  active={val === 'C'}  color="bg-green-600" onClick={() => handleValue(item.id, 'C')}  />
+                  <ValueBtn label="NC" active={val === 'NC'} color="bg-red-500"   onClick={() => handleValue(item.id, 'NC')} />
+                  <ValueBtn label="NA" active={val === 'NA'} color="bg-gray-400"  onClick={() => handleValue(item.id, 'NA')} />
+                </>
+              )}
 
-              {/* Document upload (only for requires_document items) */}
+              {/* Read-only: status chip */}
+              {readOnly && val && (
+                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  val === 'C'  ? 'bg-green-100 text-green-700' :
+                  val === 'NC' ? 'bg-red-100   text-red-700'   :
+                                 'bg-gray-100  text-gray-500'
+                }`}>
+                  {val === 'C'  && <CheckCircle className="w-3 h-3" />}
+                  {val === 'NC' && <XCircle     className="w-3 h-3" />}
+                  {val === 'NA' && <MinusCircle className="w-3 h-3" />}
+                  {val}
+                </span>
+              )}
+              {readOnly && !val && (
+                <span className="text-xs text-gray-300 italic">Sin registro</span>
+              )}
+
+              {/* Document (requires_document items) */}
               {item.requires_document && (
                 <div className="flex items-center gap-1">
                   {doc ? (
@@ -207,37 +217,26 @@ export default function ChecklistView({
                       canDelete={canDeleteDocs && !readOnly}
                     />
                   ) : (
-                    <button
-                      onClick={() => handleUploadClick(item.id)}
-                      disabled={readOnly || isUploading}
-                      className={`
-                        flex items-center gap-1 px-2 py-1 rounded text-xs border transition-all
-                        ${readOnly
-                          ? 'border-gray-700 text-gray-600 cursor-not-allowed'
-                          : 'border-blue-600 text-blue-400 hover:bg-blue-900/30 hover:text-blue-300'
-                        }
-                      `}
-                      title="Adjuntar documento (PDF o foto)"
-                    >
-                      {isUploading
-                        ? <Loader2 className="w-3 h-3 animate-spin" />
-                        : <Upload className="w-3 h-3" />
-                      }
-                      {isUploading ? 'Subiendo...' : 'Adjuntar'}
-                    </button>
+                    !readOnly && (
+                      <button
+                        onClick={() => handleUploadClick(item.id)}
+                        disabled={isUploading}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-500 transition-all disabled:opacity-50"
+                        title="Adjuntar documento (PDF o foto)"
+                      >
+                        {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                        {isUploading ? 'Subiendo...' : 'Adjuntar'}
+                      </button>
+                    )
                   )}
-                  {/* Allow re-upload even if doc exists */}
                   {doc && !readOnly && (
                     <button
                       onClick={() => handleUploadClick(item.id)}
                       disabled={isUploading}
-                      className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-300 transition-all"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-all"
                       title="Reemplazar documento"
                     >
-                      {isUploading
-                        ? <Loader2 className="w-3 h-3 animate-spin" />
-                        : <Upload className="w-3 h-3" />
-                      }
+                      {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
                     </button>
                   )}
                 </div>
@@ -248,7 +247,7 @@ export default function ChecklistView({
       })}
 
       {items.length === 0 && (
-        <div className="py-8 text-center text-gray-500 text-sm">
+        <div className="py-8 text-center text-gray-400 text-sm">
           No hay ítems configurados para esta planilla.
         </div>
       )}
