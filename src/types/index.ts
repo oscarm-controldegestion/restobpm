@@ -284,7 +284,13 @@ export type AlertType         = 'not_started' | 'incomplete' | 'overdue'
 export type PlanillaValueType = 'compliance' | 'temperature' | 'compliance_mt'
 export type TimeSlot          = 'morning' | 'afternoon'
 
-export type PlanillaLayoutType = 'default' | 'worker_hygiene' | 'product_reception'
+export type PlanillaLayoutType =
+  | 'default'
+  | 'worker_hygiene'
+  | 'product_reception'
+  | 'fumigation_program'
+  | 'training_program'
+  | 'equipment_maintenance'
 
 export type ReceptionEstado = 'conforme' | 'no_conforme' | 'observacion'
 
@@ -308,6 +314,86 @@ export interface ProductReceptionEntry {
   photo_url: string | null
   photo_taken_at: string | null
   recibido_por: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ─── FUMIGACIÓN ──────────────────────────────────────────────────────────────
+export type FumigacionPeriodo = 'mensual' | 'bimestral' | 'trimestral'
+export interface FumigacionRecord {
+  id: string
+  tenant_id: string
+  month_id: string
+  fecha_fumigacion: string           // ISO date
+  empresa_fumigadora: string
+  nombre_tecnico: string | null
+  n_registro_sag: string | null
+  producto_utilizado: string | null
+  dosis: string | null
+  areas_tratadas: string | null
+  plagas_objetivo: string | null
+  periodo: FumigacionPeriodo
+  fecha_proxima: string | null
+  certificado_url: string | null
+  certificado_nombre: string | null
+  observaciones: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ─── CAPACITACIÓN ────────────────────────────────────────────────────────────
+export type TipoInstructor  = 'interno' | 'externo' | 'online'
+export type EvaluacionResult = 'aprobado' | 'reprobado' | 'pendiente' | 'sin_evaluacion'
+export interface TrainingRecord {
+  id: string
+  tenant_id: string
+  month_id: string
+  fecha: string                      // ISO date
+  tema: string
+  objetivos: string | null
+  tipo_instructor: TipoInstructor
+  nombre_instructor: string | null
+  empresa_instructor: string | null
+  duracion_horas: number | null
+  n_participantes: number | null
+  lista_participantes: string | null
+  evaluacion: EvaluacionResult
+  puntaje_promedio: number | null
+  certificado_url: string | null
+  certificado_nombre: string | null
+  material_url: string | null
+  material_nombre: string | null
+  observaciones: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ─── MANTENIMIENTO DE EQUIPOS ─────────────────────────────────────────────────
+export type TipoMantenimiento = 'preventivo' | 'correctivo' | 'calibracion' | 'inspeccion'
+export type EstadoEquipo      = 'en_servicio' | 'fuera_servicio' | 'en_reparacion'
+export interface MaintenanceRecord {
+  id: string
+  tenant_id: string
+  month_id: string
+  fecha_mantenimiento: string        // ISO date
+  equipo_nombre: string
+  equipo_marca: string | null
+  equipo_modelo: string | null
+  equipo_n_serie: string | null
+  tipo_mantenimiento: TipoMantenimiento
+  descripcion_trabajo: string
+  empresa_tecnico: string | null
+  nombre_tecnico: string | null
+  repuestos_utilizados: string | null
+  costo: number | null
+  estado_equipo: EstadoEquipo
+  fecha_proxima: string | null
+  certificado_url: string | null
+  certificado_nombre: string | null
+  observaciones: string | null
   created_by: string | null
   created_at: string
   updated_at: string

@@ -14,6 +14,9 @@ import PlanillaGrid from '@/components/planilla/PlanillaGrid'
 import ChecklistView from '@/components/planilla/ChecklistView'
 import HigieneManipuladoresView from '@/components/planilla/HigieneManipuladoresView'
 import RecepcionProductosView from '@/components/planilla/RecepcionProductosView'
+import FumigacionView from '@/components/planilla/FumigacionView'
+import CapacitacionView from '@/components/planilla/CapacitacionView'
+import MantenimientoEquiposView from '@/components/planilla/MantenimientoEquiposView'
 import type { PlanillaMonth, TimeSlot } from '@/types'
 
 const MONTH_NAMES = [
@@ -130,6 +133,9 @@ function PlanillaDetail({
   // Worker hygiene grid mode
   const isWorkerHygiene       = planillaMonth.template?.layout_type === 'worker_hygiene'
   const isProductReception    = planillaMonth.template?.layout_type === 'product_reception'
+  const isFumigacion          = planillaMonth.template?.layout_type === 'fumigation_program'
+  const isCapacitacion        = planillaMonth.template?.layout_type === 'training_program'
+  const isMantenimiento       = planillaMonth.template?.layout_type === 'equipment_maintenance'
 
   // Compliance indicators
   const totalCells  = compItems.length * daysInMonth
@@ -213,6 +219,12 @@ function PlanillaDetail({
 
       {isProductReception ? (
         <RecepcionProductosView month={planillaMonth} readOnly={isReadonly} />
+      ) : isFumigacion ? (
+        <FumigacionView month={planillaMonth} readOnly={isReadonly} />
+      ) : isCapacitacion ? (
+        <CapacitacionView month={planillaMonth} readOnly={isReadonly} />
+      ) : isMantenimiento ? (
+        <MantenimientoEquiposView month={planillaMonth} readOnly={isReadonly} />
       ) : isWorkerHygiene ? (
         <HigieneManipuladoresView
           monthId={planillaMonth.id}

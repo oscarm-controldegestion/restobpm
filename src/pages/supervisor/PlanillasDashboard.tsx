@@ -29,6 +29,9 @@ import PlanillaGrid from '@/components/planilla/PlanillaGrid'
 import ChecklistView from '@/components/planilla/ChecklistView'
 import HigieneManipuladoresView from '@/components/planilla/HigieneManipuladoresView'
 import RecepcionProductosView from '@/components/planilla/RecepcionProductosView'
+import FumigacionView from '@/components/planilla/FumigacionView'
+import CapacitacionView from '@/components/planilla/CapacitacionView'
+import MantenimientoEquiposView from '@/components/planilla/MantenimientoEquiposView'
 import type { PlanillaMonth, PlanillaTemplate, PlanillaItem, PlanillaFrequency, PlanillaValueType, Area } from '@/types'
 
 const MONTH_NAMES = [
@@ -57,6 +60,9 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
   const isMonthlyChecklist  = items.length > 0 && items.every(i => i.frequency === 'monthly')
   const isWorkerHygiene     = planillaMonth.template?.layout_type === 'worker_hygiene'
   const isProductReception  = planillaMonth.template?.layout_type === 'product_reception'
+  const isFumigacion        = planillaMonth.template?.layout_type === 'fumigation_program'
+  const isCapacitacion      = planillaMonth.template?.layout_type === 'training_program'
+  const isMantenimiento     = planillaMonth.template?.layout_type === 'equipment_maintenance'
 
   const totalCells  = items.filter(i => i.value_type === 'compliance').length
     * new Date(planillaMonth.year, planillaMonth.month, 0).getDate()
@@ -110,6 +116,12 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
 
       {isProductReception ? (
         <RecepcionProductosView month={planillaMonth} readOnly={false} />
+      ) : isFumigacion ? (
+        <FumigacionView month={planillaMonth} readOnly={false} />
+      ) : isCapacitacion ? (
+        <CapacitacionView month={planillaMonth} readOnly={false} />
+      ) : isMantenimiento ? (
+        <MantenimientoEquiposView month={planillaMonth} readOnly={false} />
       ) : isWorkerHygiene ? (
         <HigieneManipuladoresView
           monthId={planillaMonth.id}

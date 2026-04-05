@@ -4,7 +4,11 @@ import { useAuth } from '@/contexts/AuthContext'
 import type {
   PlanillaTemplate, PlanillaItem, PlanillaMonth, PlanillaMonthItem,
   PlanillaEntry, PlanillaAlert, PlanillaValue, TimeSlot, Profile, Area,
-  PlanillaDocument, Worker, HigieneEntry, WorkerShift, ProductReceptionEntry, ReceptionEstado
+  PlanillaDocument, Worker, HigieneEntry, WorkerShift,
+  ProductReceptionEntry, ReceptionEstado,
+  FumigacionRecord, FumigacionPeriodo,
+  TrainingRecord, TipoInstructor, EvaluacionResult,
+  MaintenanceRecord, TipoMantenimiento, EstadoEquipo
 } from '@/types'
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -878,4 +882,181 @@ export function useProductReception(monthId: string | null) {
   }, [tenant, entries])
 
   return { entries, loading, saving, addEntry, deleteEntry, reload: load }
+}
+
+// ── Program document upload helper ───────────────────────────────────────────
+async function uploadProgramDoc(
+  tenantId: string,
+  file: File,
+  folder: string
+): Promise<{ url: string | null; name: string }> {
+  const ext  = file.name.split('.').pop() ?? 'bin'
+  const path = `${tenantId}/${folder}/${Date.now()}.${ext}`
+  const { error } = await supabase.storage
+    .from('program-documents')
+    .upload(path, file, { upsert: false, contentType: file.type })
+  if (error) { console.error('uploadProgramDoc:', error); return { url: null, name: file.name } }
+  const { data } = supabase.storage.from('program-documents').getPublicUrl(path)
+  return { url: data.publicUrl, name: file.name }
+}
+
+// ── Fumigation records ────────────────────────────────────────────────────────
+export function useFumigacion(monthId: string | null) {
+  const { tenant, profile } = useAuth()
+  const [records,  setRecords]  = useState<FumigacionRecord[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [saving,   setSaving]   = useState(false)
+
+  const load = useCallback(async () => {
+    if (!monthId || !tenant) { setLoading(false); return }
+    const { data } = await supabase
+      .from('fumigation_records')
+      .select('*')
+      .eq('month_id', monthId)
+      .order('fecha_fumigacion', { ascending: false })
+    setRecords((data ?? []) as FumigacionRecord[])
+    setLoading(false)
+  }, [monthId, tenant])
+
+  useEffect(() => { load() }, [load])
+
+  type NewFumigacion = Omit<FumigacionRecord, 'id' | 'tenant_id' | 'month_id' | 'created_by' | 'created_at' | 'updated_at' | 'certificado_url' | 'certificado_nombre'>
+
+  const addRecord = useCallback(async (fields: NewFumigacion, certFile?: File | null): Promise<boolean> => {
+    if (!monthId || !tenant || !profile) return false
+    setSaving(true)
+    try {
+      let certificado_url: string | null = null
+      let certificado_nombre: string | null = null
+      if (certFile) {
+        const r = await uploadProgramDoc(tenant.id, certFile, 'fumigacion')
+        certificado_url = r.url; certificado_nombre = r.name
+      }
+      const { error } = await supabase.from('fumigation_records').insert({
+        ...fields, id: crypto.randomUUID(),
+        tenant_id: tenant.id, month_id: monthId,
+        created_by: profile.id, certificado_url, certificado_nombre,
+      })
+      if (error) throw error
+      await load(); return true
+    } catch (e) { console.error('addFumigacion:', e); return false }
+    finally     { setSaving(false) }
+  }, [monthId, tenant, profile, load])
+
+  const deleteRecord = useCallback(async (id: string): Promise<boolean> => {
+    if (!tenant) return false
+    const { error } = await supabase.from('fumigation_records').delete().eq('id', id)
+    if (error) return false
+    setRecords(prev => prev.filter(r => r.id !== id))
+    return true
+  }, [tenant])
+
+  return { records, loading, saving, addRecord, deleteRecord, reload: load }
+}
+
+// ── Training records ──────────────────────────────────────────────────────────
+export function useCapacitacion(monthId: string | null) {
+  const { tenant, profile } = useAuth()
+  const [records,  setRecords]  = useState<TrainingRecord[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [saving,   setSaving]   = useState(false)
+
+  const load = useCallback(async () => {
+    if (!monthId || !tenant) { setLoading(false); return }
+    const { data } = await supabase
+      .from('training_records')
+      .select('*')
+      .eq('month_id', monthId)
+      .order('fecha', { ascending: false })
+    setRecords((data ?? []) as TrainingRecord[])
+    setLoading(false)
+  }, [monthId, tenant])
+
+  useEffect(() => { load() }, [load])
+
+  type NewTraining = Omit<TrainingRecord, 'id' | 'tenant_id' | 'month_id' | 'created_by' | 'created_at' | 'updated_at' | 'certificado_url' | 'certificado_nombre' | 'material_url' | 'material_nombre'>
+
+  const addRecord = useCallback(async (
+    fields: NewTraining,
+    certFile?: File | null,
+    materialFile?: File | null
+  ): Promise<boolean> => {
+    if (!monthId || !tenant || !profile) return false
+    setSaving(true)
+    try {
+      let certificado_url: string | null = null, certificado_nombre: string | null = null
+      let material_url:    string | null = null, material_nombre:    string | null = null
+      if (certFile)     { const r = await uploadProgramDoc(tenant.id, certFile, 'capacitacion/cert'); certificado_url = r.url; certificado_nombre = r.name }
+      if (materialFile) { const r = await uploadProgramDoc(tenant.id, materialFile, 'capacitacion/mat'); material_url = r.url; material_nombre = r.name }
+      const { error } = await supabase.from('training_records').insert({
+        ...fields, id: crypto.randomUUID(),
+        tenant_id: tenant.id, month_id: monthId,
+        created_by: profile.id,
+        certificado_url, certificado_nombre, material_url, material_nombre,
+      })
+      if (error) throw error
+      await load(); return true
+    } catch (e) { console.error('addCapacitacion:', e); return false }
+    finally     { setSaving(false) }
+  }, [monthId, tenant, profile, load])
+
+  const deleteRecord = useCallback(async (id: string): Promise<boolean> => {
+    if (!tenant) return false
+    const { error } = await supabase.from('training_records').delete().eq('id', id)
+    if (error) return false
+    setRecords(prev => prev.filter(r => r.id !== id))
+    return true
+  }, [tenant])
+
+  return { records, loading, saving, addRecord, deleteRecord, reload: load }
+}
+
+// ── Equipment maintenance records ─────────────────────────────────────────────
+export function useMantenimiento(monthId: string | null) {
+  const { tenant, profile } = useAuth()
+  const [records,  setRecords]  = useState<MaintenanceRecord[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [saving,   setSaving]   = useState(false)
+
+  const load = useCallback(async () => {
+    if (!monthId || !tenant) { setLoading(false); return }
+    const { data } = await supabase
+      .from('equipment_maintenance_records')
+      .select('*')
+      .eq('month_id', monthId)
+      .order('fecha_mantenimiento', { ascending: false })
+    setRecords((data ?? []) as MaintenanceRecord[])
+    setLoading(false)
+  }, [monthId, tenant])
+
+  useEffect(() => { load() }, [load])
+
+  type NewMaintenance = Omit<MaintenanceRecord, 'id' | 'tenant_id' | 'month_id' | 'created_by' | 'created_at' | 'updated_at' | 'certificado_url' | 'certificado_nombre'>
+
+  const addRecord = useCallback(async (fields: NewMaintenance, certFile?: File | null): Promise<boolean> => {
+    if (!monthId || !tenant || !profile) return false
+    setSaving(true)
+    try {
+      let certificado_url: string | null = null, certificado_nombre: string | null = null
+      if (certFile) { const r = await uploadProgramDoc(tenant.id, certFile, 'mantenimiento'); certificado_url = r.url; certificado_nombre = r.name }
+      const { error } = await supabase.from('equipment_maintenance_records').insert({
+        ...fields, id: crypto.randomUUID(),
+        tenant_id: tenant.id, month_id: monthId,
+        created_by: profile.id, certificado_url, certificado_nombre,
+      })
+      if (error) throw error
+      await load(); return true
+    } catch (e) { console.error('addMantenimiento:', e); return false }
+    finally     { setSaving(false) }
+  }, [monthId, tenant, profile, load])
+
+  const deleteRecord = useCallback(async (id: string): Promise<boolean> => {
+    if (!tenant) return false
+    const { error } = await supabase.from('equipment_maintenance_records').delete().eq('id', id)
+    if (error) return false
+    setRecords(prev => prev.filter(r => r.id !== id))
+    return true
+  }, [tenant])
+
+  return { records, loading, saving, addRecord, deleteRecord, reload: load }
 }
