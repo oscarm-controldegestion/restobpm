@@ -8,7 +8,7 @@ import type { WorkerShift } from '@/types'
 type Tab = 'perfil' | 'password' | 'establecimiento' | 'trabajadores'
 
 export default function Settings() {
-  const { profile, tenant, refreshProfile } = useAuth()
+  const { profile, tenant, refreshProfile, refreshTenant } = useAuth()
   const [tab, setTab] = useState<Tab>('perfil')
 
   // ── Estado perfil ──
@@ -27,9 +27,15 @@ export default function Settings() {
 
   // ── Estado establecimiento ──
   const [local, setLocal] = useState({
-    name:    tenant?.name    ?? '',
-    address: tenant?.address ?? '',
-    phone:   tenant?.phone   ?? '',
+    name:                 tenant?.name                 ?? '',
+    rut:                  tenant?.rut                  ?? '',
+    address:              tenant?.address              ?? '',
+    city:                 tenant?.city                 ?? '',
+    phone:                tenant?.phone                ?? '',
+    email:                tenant?.email                ?? '',
+    resolucion_sanitaria: tenant?.resolucion_sanitaria ?? '',
+    responsible_bpm:      tenant?.responsible_bpm      ?? '',
+    cargo_responsable:    tenant?.cargo_responsable     ?? 'Encargado BPM',
   })
   const [savingLocal, setSavingLocal] = useState(false)
   const [msgLocal, setMsgLocal]       = useState<{ ok: boolean; text: string } | null>(null)
@@ -93,16 +99,23 @@ export default function Settings() {
     const { error } = await supabase
       .from('tenants')
       .update({
-        name:    local.name.trim(),
-        address: local.address.trim() || null,
-        phone:   local.phone.trim()   || null,
+        name:                 local.name.trim(),
+        rut:                  local.rut.trim()                  || null,
+        address:              local.address.trim()              || null,
+        city:                 local.city.trim()                 || null,
+        phone:                local.phone.trim()                || null,
+        email:                local.email.trim()                || null,
+        resolucion_sanitaria: local.resolucion_sanitaria.trim() || null,
+        responsible_bpm:      local.responsible_bpm.trim()      || null,
+        cargo_responsable:    local.cargo_responsable.trim()    || null,
       })
       .eq('id', tenant!.id)
 
     if (error) {
       setMsgLocal({ ok: false, text: 'No se pudo guardar. Intenta de nuevo.' })
     } else {
-      setMsgLocal({ ok: true, text: 'Datos del establecimiento actualizados.' })
+      await refreshTenant()
+      setMsgLocal({ ok: true, text: 'Datos del establecimiento actualizados. Los documentos ya reflejan los cambios.' })
     }
     setSavingLocal(false)
   }
@@ -279,37 +292,123 @@ export default function Settings() {
 
       {/* ── Tab: Establecimiento ── */}
       {tab === 'establecimiento' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-semibold text-gray-800 mb-1">Datos del establecimiento</h2>
-          <p className="text-xs text-gray-400 mb-5">Esta información aparece en los reportes generados.</p>
-          <form onSubmit={handleSaveLocal} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Nombre del local *</label>
-              <input
-                required
-                value={local.name}
-                onChange={e => setLocal({ ...local, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                placeholder="Ej: Rico Pollo Chile S.A."
-              />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
+          <div>
+            <h2 className="font-semibold text-gray-800 mb-1">Datos del establecimiento</h2>
+            <p className="text-xs text-gray-400">
+              Esta información se imprime automáticamente en todos los documentos BPM,
+              procedimientos operativos (POE/POES) y reportes de fiscalización.
+              Completa todos los campos para que los documentos queden correctamente identificados.
+            </p>
+          </div>
+
+          <form onSubmit={handleSaveLocal} className="space-y-5">
+            {/* ── Bloque 1: Identidad legal ── */}
+            <div className="border border-gray-100 rounded-lg p-4 space-y-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Identidad legal</p>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Razón social / Nombre del local *</label>
+                <input
+                  required
+                  value={local.name}
+                  onChange={e => setLocal({ ...local, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  placeholder="Ej: Restaurante El Rincón S.P.A."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">RUT del establecimiento</label>
+                <input
+                  value={local.rut}
+                  onChange={e => setLocal({ ...local, rut: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  placeholder="76.123.456-7"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  N° Resolución Sanitaria
+                  <span className="ml-1 text-gray-400 font-normal">(aparece en documentos BPM y fiscalización)</span>
+                </label>
+                <input
+                  value={local.resolucion_sanitaria}
+                  onChange={e => setLocal({ ...local, resolucion_sanitaria: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  placeholder="Ej: RS-2024-00123 / SEREMI RM"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Dirección</label>
-              <input
-                value={local.address}
-                onChange={e => setLocal({ ...local, address: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                placeholder="Av. Principal 123, Santiago"
-              />
+
+            {/* ── Bloque 2: Ubicación y contacto ── */}
+            <div className="border border-gray-100 rounded-lg p-4 space-y-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ubicación y contacto</p>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Dirección</label>
+                <input
+                  value={local.address}
+                  onChange={e => setLocal({ ...local, address: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  placeholder="Av. Principal 123, Of. 2"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Ciudad / Comuna</label>
+                <input
+                  value={local.city}
+                  onChange={e => setLocal({ ...local, city: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  placeholder="Ej: Las Condes, Santiago"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono</label>
+                  <input
+                    value={local.phone}
+                    onChange={e => setLocal({ ...local, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    placeholder="+56 2 1234 5678"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Correo electrónico</label>
+                  <input
+                    type="email"
+                    value={local.email}
+                    onChange={e => setLocal({ ...local, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    placeholder="contacto@milocal.cl"
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono</label>
-              <input
-                value={local.phone}
-                onChange={e => setLocal({ ...local, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                placeholder="+56 2 1234 5678"
-              />
+
+            {/* ── Bloque 3: Responsable BPM ── */}
+            <div className="border border-gray-100 rounded-lg p-4 space-y-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Responsable BPM
+                <span className="ml-1 text-gray-400 font-normal normal-case">— firma los documentos ante fiscalización</span>
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Nombre del responsable</label>
+                  <input
+                    value={local.responsible_bpm}
+                    onChange={e => setLocal({ ...local, responsible_bpm: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    placeholder="Ej: Juan Pérez González"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Cargo</label>
+                  <input
+                    value={local.cargo_responsable}
+                    onChange={e => setLocal({ ...local, cargo_responsable: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    placeholder="Ej: Jefe de Cocina / Encargado BPM"
+                  />
+                </div>
+              </div>
             </div>
 
             {msgLocal && <Msg m={msgLocal} />}
@@ -320,7 +419,7 @@ export default function Settings() {
                 disabled={savingLocal}
                 className="px-5 py-2 bg-brand-700 text-white text-sm font-semibold rounded-lg hover:bg-brand-900 disabled:opacity-60 transition-colors"
               >
-                {savingLocal ? 'Guardando…' : 'Guardar datos'}
+                {savingLocal ? 'Guardando…' : 'Guardar datos del establecimiento'}
               </button>
             </div>
           </form>

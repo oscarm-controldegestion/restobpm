@@ -11,9 +11,14 @@ export interface Tenant {
   name: string
   rut?: string
   address?: string
+  city?: string
   phone?: string
+  email?: string
   type: EstablishmentType
   logo_url?: string
+  resolucion_sanitaria?: string
+  responsible_bpm?: string
+  cargo_responsable?: string
   plan: SubscriptionPlan
   plan_expires_at?: string
   stripe_customer_id?: string
