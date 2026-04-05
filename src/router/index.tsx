@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import AppLayout from '@/components/layout/AppLayout'
 import LoginPage from '@/pages/auth/LoginPage'
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import UserManagement from '@/pages/admin/UserManagement'
 import SupervisorDashboard from '@/pages/supervisor/SupervisorDashboard'
@@ -44,6 +45,7 @@ export default function AppRouter() {
       <Routes>
         {/* ── Pública ── */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* ── App ── */}
         <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

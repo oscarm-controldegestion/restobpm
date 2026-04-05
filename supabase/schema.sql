@@ -294,6 +294,21 @@ CREATE POLICY "audit_select_admin" ON audit_log FOR SELECT
   USING (tenant_id = auth.tenant_id() AND auth.user_role() = 'admin');
 
 -- ══════════════════════════════════════════════════════════════════
+-- RLS DELETE POLICIES - Explicit delete restrictions per table
+-- ══════════════════════════════════════════════════════════════════
+CREATE POLICY "tenant_delete_deny"        ON tenants              FOR DELETE USING (false);
+CREATE POLICY "profiles_delete_admin"     ON profiles             FOR DELETE USING (tenant_id = auth.tenant_id() AND auth.user_role() = 'admin');
+CREATE POLICY "exec_delete_admin"         ON checklist_executions FOR DELETE USING (tenant_id = auth.tenant_id() AND auth.user_role() = 'admin');
+CREATE POLICY "resp_delete_admin"         ON checklist_responses  FOR DELETE USING (EXISTS (SELECT 1 FROM checklist_executions e WHERE e.id = execution_id AND e.tenant_id = auth.tenant_id()) AND auth.user_role() = 'admin');
+CREATE POLICY "nc_delete_admin"           ON non_conformities     FOR DELETE USING (tenant_id = auth.tenant_id() AND auth.user_role() = 'admin');
+CREATE POLICY "ca_delete_supervisor"      ON corrective_actions   FOR DELETE USING (EXISTS (SELECT 1 FROM non_conformities nc WHERE nc.id = non_conformity_id AND nc.tenant_id = auth.tenant_id()) AND auth.user_role() IN ('supervisor','admin'));
+CREATE POLICY "pers_doc_delete_admin"     ON personnel_documents  FOR DELETE USING (tenant_id = auth.tenant_id() AND auth.user_role() = 'admin');
+CREATE POLICY "temp_log_delete_admin"     ON temperature_logs     FOR DELETE USING (tenant_id = auth.tenant_id() AND auth.user_role() = 'admin');
+CREATE POLICY "audit_delete_deny"         ON audit_log            FOR DELETE USING (false);
+CREATE POLICY "bpm_modules_delete_deny"   ON bpm_modules          FOR DELETE USING (false);
+CREATE POLICY "bpm_items_delete_deny"     ON bpm_items            FOR DELETE USING (false);
+
+-- ══════════════════════════════════════════════════════════════════
 -- TRIGGER: auto-update updated_at
 -- ══════════════════════════════════════════════════════════════════
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -308,16 +323,23 @@ CREATE TRIGGER profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW EXECUT
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Solo si viene con metadata de tenant_id y role
-  IF NEW.raw_user_meta_data->>'tenant_id' IS NOT NULL THEN
-    INSERT INTO profiles(id, tenant_id, full_name, role)
+  -- SECURITY: Do NOT trust raw_user_meta_data for tenant_id or role.
+  -- The create_tenant_user RPC handles profile creation securely.
+  -- This trigger now only logs the event for audit purposes.
+  BEGIN
+    INSERT INTO public.audit_log (tenant_id, action, entity, entity_id, performed_by, details)
     VALUES (
+      NULL,
+      'user_registered',
+      'auth.users',
       NEW.id,
-      (NEW.raw_user_meta_data->>'tenant_id')::UUID,
-      COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-      COALESCE(NEW.raw_user_meta_data->>'role', 'operator')
+      NEW.id,
+      json_build_object('email', NEW.email, 'method', 'trigger')::jsonb
     );
-  END IF;
+  EXCEPTION WHEN OTHERS THEN
+    -- Don't block user creation if audit log fails
+    NULL;
+  END;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

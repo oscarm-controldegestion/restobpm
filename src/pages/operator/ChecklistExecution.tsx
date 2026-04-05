@@ -213,29 +213,56 @@ export default function ChecklistExecution() {
           <p className="text-sm text-gray-600 leading-relaxed mb-4">{currentItem.description}</p>
 
           {/* Campo de valor numérico (temperatura, cloro, etc.) */}
-          {currentItem.requires_value && (
-            <div className="flex items-center gap-3 bg-blue-50 rounded-xl p-3 mb-4">
-              <Thermometer size={18} className="text-blue-600 shrink-0" />
-              <div className="flex-1">
-                <label className="text-xs text-blue-700 font-medium block mb-1">
-                  Valor medido ({currentItem.value_unit})
-                  {currentItem.value_min !== undefined && ` · Rango: ${currentItem.value_min} a ${currentItem.value_max} ${currentItem.value_unit}`}
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={responses[currentItem.id]?.numeric_value ?? ''}
-                  onChange={e => setAnswer(currentItem.id, {
-                    ...responses[currentItem.id],
-                    result: responses[currentItem.id]?.result ?? 'complies',
-                    numeric_value: parseFloat(e.target.value)
-                  })}
-                  className="w-full bg-white rounded-lg border border-blue-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder={`Ej: ${currentItem.value_min}`}
-                />
+          {currentItem.requires_value && (() => {
+            const numVal = responses[currentItem.id]?.numeric_value
+            const hasMin = currentItem.value_min !== undefined && currentItem.value_min !== null
+            const hasMax = currentItem.value_max !== undefined && currentItem.value_max !== null
+            const outOfRange = numVal !== undefined && numVal !== null && !isNaN(numVal) && (
+              (hasMin && numVal < currentItem.value_min!) ||
+              (hasMax && numVal > currentItem.value_max!)
+            )
+            return (
+              <div className={`flex items-center gap-3 rounded-xl p-3 mb-4 ${outOfRange ? 'bg-red-50 border border-red-200' : 'bg-blue-50'}`}>
+                <Thermometer size={18} className={outOfRange ? 'text-red-600 shrink-0' : 'text-blue-600 shrink-0'} />
+                <div className="flex-1">
+                  <label className={`text-xs font-medium block mb-1 ${outOfRange ? 'text-red-700' : 'text-blue-700'}`}>
+                    Valor medido ({currentItem.value_unit})
+                    {hasMin && ` · Rango: ${currentItem.value_min} a ${currentItem.value_max} ${currentItem.value_unit}`}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min={hasMin ? currentItem.value_min : undefined}
+                    max={hasMax ? currentItem.value_max : undefined}
+                    value={responses[currentItem.id]?.numeric_value ?? ''}
+                    onChange={e => {
+                      const val = parseFloat(e.target.value)
+                      const isOutOfRange = !isNaN(val) && (
+                        (hasMin && val < currentItem.value_min!) ||
+                        (hasMax && val > currentItem.value_max!)
+                      )
+                      setAnswer(currentItem.id, {
+                        ...responses[currentItem.id],
+                        result: isOutOfRange ? 'non_compliant' : (responses[currentItem.id]?.result ?? 'complies'),
+                        numeric_value: val
+                      })
+                    }}
+                    className={`w-full bg-white rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 ${
+                      outOfRange
+                        ? 'border-red-300 focus:ring-red-400 text-red-700'
+                        : 'border-blue-200 focus:ring-blue-400'
+                    }`}
+                    placeholder={`Ej: ${currentItem.value_min}`}
+                  />
+                  {outOfRange && (
+                    <p className="text-xs text-red-600 mt-1 font-medium">
+                      Valor fuera de rango permitido ({currentItem.value_min} - {currentItem.value_max} {currentItem.value_unit})
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Opciones de resultado */}
           <div className="grid grid-cols-2 gap-2">

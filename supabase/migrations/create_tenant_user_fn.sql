@@ -31,6 +31,8 @@ DECLARE
   v_chars         TEXT := 'abcdefghjkmnpqrstuvwxyz';
   v_upper         TEXT := 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   v_digits        TEXT := '23456789';
+  v_special       TEXT := '!@#$%&*';
+  v_random_bytes  BYTEA;
   i               INT;
 BEGIN
   -- 1. Obtener usuario autenticado
@@ -64,16 +66,26 @@ BEGIN
     RETURN json_build_object('error', 'Este correo electrónico ya está registrado en el sistema.');
   END IF;
 
-  -- 5. Generar contraseña temporal (6 minúsculas + 1 mayúscula + 1 dígito = 8 chars)
+  -- 5. SECURE password generation using gen_random_bytes (cryptographic PRNG)
+  -- 12 chars: 6 lowercase + 2 uppercase + 2 digits + 1 special + 1 extra
+  v_random_bytes := gen_random_bytes(12);
   v_temp_password := '';
-  FOR i IN 1..6 LOOP
+  FOR i IN 0..5 LOOP
     v_temp_password := v_temp_password ||
-      substr(v_chars, 1 + floor(random() * length(v_chars))::int, 1);
+      substr(v_chars, 1 + (get_byte(v_random_bytes, i) % length(v_chars)), 1);
   END LOOP;
   v_temp_password := v_temp_password ||
-    substr(v_upper, 1 + floor(random() * length(v_upper))::int, 1);
+    substr(v_upper, 1 + (get_byte(v_random_bytes, 6) % length(v_upper)), 1);
   v_temp_password := v_temp_password ||
-    substr(v_digits, 1 + floor(random() * length(v_digits))::int, 1);
+    substr(v_upper, 1 + (get_byte(v_random_bytes, 7) % length(v_upper)), 1);
+  v_temp_password := v_temp_password ||
+    substr(v_digits, 1 + (get_byte(v_random_bytes, 8) % length(v_digits)), 1);
+  v_temp_password := v_temp_password ||
+    substr(v_digits, 1 + (get_byte(v_random_bytes, 9) % length(v_digits)), 1);
+  v_temp_password := v_temp_password ||
+    substr(v_special, 1 + (get_byte(v_random_bytes, 10) % length(v_special)), 1);
+  v_temp_password := v_temp_password ||
+    substr(v_chars, 1 + (get_byte(v_random_bytes, 11) % length(v_chars)), 1);
 
   -- 6. Crear usuario en auth.users
   v_new_user_id := gen_random_uuid();

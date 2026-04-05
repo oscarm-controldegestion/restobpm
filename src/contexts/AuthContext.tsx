@@ -98,9 +98,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Client-side rate limiting: max 5 attempts per 60 seconds
   const signIn = async (email: string, password: string) => {
+    const RATE_KEY = 'restobpm_auth_attempts'
+    const MAX_ATTEMPTS = 5
+    const WINDOW_MS = 60_000
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(RATE_KEY) || '{"attempts":[],"lockUntil":0}')
+      const now = Date.now()
+      if (stored.lockUntil && now < stored.lockUntil) {
+        const secs = Math.ceil((stored.lockUntil - now) / 1000)
+        return { error: `Demasiados intentos. Espera ${secs} segundos.` }
+      }
+      stored.attempts = (stored.attempts as number[]).filter((t: number) => now - t < WINDOW_MS)
+      if (stored.attempts.length >= MAX_ATTEMPTS) {
+        stored.lockUntil = now + WINDOW_MS
+        sessionStorage.setItem(RATE_KEY, JSON.stringify(stored))
+        return { error: 'Demasiados intentos. Espera 60 segundos antes de intentar nuevamente.' }
+      }
+      stored.attempts.push(now)
+      sessionStorage.setItem(RATE_KEY, JSON.stringify(stored))
+    } catch { /* ignore storage errors */ }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return { error: error.message }
+
+    // Clear rate limit on successful login
+    try { sessionStorage.removeItem('restobpm_auth_attempts') } catch {}
     return { error: null }
   }
 

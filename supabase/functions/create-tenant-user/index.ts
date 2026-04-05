@@ -112,15 +112,30 @@ serve(async (req) => {
 })
 
 function generateTempPassword(): string {
-  const chars  = 'abcdefghjkmnpqrstuvwxyz'
-  const upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
-  const digits = '23456789'
+  const chars   = 'abcdefghjkmnpqrstuvwxyz'
+  const upper   = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const digits  = '23456789'
+  const special = '!@#$%&*'
+  // Use cryptographic PRNG instead of Math.random()
+  const bytes = new Uint8Array(12)
+  crypto.getRandomValues(bytes)
   let pw = ''
-  for (let i = 0; i < 6; i++) pw += chars[Math.floor(Math.random() * chars.length)]
-  pw += upper[Math.floor(Math.random() * upper.length)]
-  pw += digits[Math.floor(Math.random() * digits.length)]
-  // mezclar
-  return pw.split('').sort(() => Math.random() - 0.5).join('')
+  for (let i = 0; i < 6; i++) pw += chars[bytes[i] % chars.length]
+  pw += upper[bytes[6] % upper.length]
+  pw += upper[bytes[7] % upper.length]
+  pw += digits[bytes[8] % digits.length]
+  pw += digits[bytes[9] % digits.length]
+  pw += special[bytes[10] % special.length]
+  pw += chars[bytes[11] % chars.length]
+  // Shuffle using Fisher-Yates with crypto randomness
+  const arr = pw.split('')
+  const shuffleBytes = new Uint8Array(arr.length)
+  crypto.getRandomValues(shuffleBytes)
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = shuffleBytes[i] % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr.join('')
 }
 
 function json(body: unknown, status: number) {
