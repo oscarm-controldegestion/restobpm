@@ -320,6 +320,21 @@ export interface PlanillaItem {
   equipment_number: string | null
   order_index: number
   active: boolean
+  requires_document: boolean
+}
+
+export interface PlanillaDocument {
+  id: string
+  tenant_id: string
+  month_id: string
+  item_id: string
+  file_url: string
+  file_name: string
+  file_type: 'pdf' | 'image'
+  file_size: number | null
+  uploaded_by: string | null
+  uploaded_at: string
+  note: string | null
 }
 
 export interface PlanillaMonth {

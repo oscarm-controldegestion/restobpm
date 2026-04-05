@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, AlertTriangle, FileText,
   Users, Settings, CreditCard, X, LogOut, ChevronRight,
-  ClipboardCheck, Bell
+  ClipboardCheck, Bell, ShieldCheck
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -18,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Historial BPM',    path: '/supervisor/history',   icon: ClipboardList,   roles: ['supervisor', 'admin'] },
   { label: 'No Conformidades', path: '/supervisor/non-conformities', icon: AlertTriangle, roles: ['supervisor', 'admin'] },
   { label: 'Reportes',         path: '/supervisor/reports',   icon: FileText,        roles: ['supervisor', 'admin'] },
+  { label: 'Archivo Fiscalización', path: '/supervisor/fiscalizacion', icon: ShieldCheck, roles: ['supervisor', 'admin'] },
 
   // ── Admin only ─────────────────────────────────────────────
   { label: 'Usuarios',         path: '/admin/users',          icon: Users,           roles: ['admin'] },

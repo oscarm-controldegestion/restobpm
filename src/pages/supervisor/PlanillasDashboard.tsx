@@ -26,6 +26,7 @@ import {
   usePlanillaMonthItems,
 } from '@/hooks/usePlanillas'
 import PlanillaGrid from '@/components/planilla/PlanillaGrid'
+import ChecklistView from '@/components/planilla/ChecklistView'
 import type { PlanillaMonth, PlanillaTemplate, PlanillaItem, PlanillaFrequency, PlanillaValueType, Area } from '@/types'
 
 const MONTH_NAMES = [
@@ -51,6 +52,8 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
   const { items, loading: loadingItems } = usePlanillaItemsForMonth(planillaMonth.id, planillaMonth.template_id)
   const { entryMap, tempMap, complianceMTMap, entries }   = usePlanillaEntries(planillaMonth.id)
 
+  const isMonthlyChecklist = items.length > 0 && items.every(i => i.frequency === 'monthly')
+
   const totalCells  = items.filter(i => i.value_type === 'compliance').length
     * new Date(planillaMonth.year, planillaMonth.month, 0).getDate()
   const filledCells = entries.filter(e => e.value !== null && e.time_slot === null).length
@@ -66,7 +69,10 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1 min-w-0">
-          <h2 className="font-bold text-gray-800 text-lg">{planillaMonth.template?.name}</h2>
+          <h2 className="font-bold text-gray-800 text-lg">
+            {planillaMonth.template?.name}
+            {planillaMonth.label ? ` — ${planillaMonth.label}` : ''}
+          </h2>
           <p className="text-sm text-gray-500">{MONTH_NAMES[planillaMonth.month]} {planillaMonth.year}</p>
         </div>
         <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_CONFIG[planillaMonth.status].color}`}>
@@ -74,7 +80,7 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
         </span>
       </div>
 
-      {totalCells > 0 && (
+      {!isMonthlyChecklist && totalCells > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Completadas', value: `${filledCells}/${totalCells}`, color: 'text-blue-600' },
@@ -96,15 +102,24 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
         </div>
       )}
 
-      <PlanillaGrid
-        planillaMonth={planillaMonth}
-        items={items}
-        entryMap={entryMap}
-        tempMap={tempMap}
-        complianceMTMap={complianceMTMap}
-        onSetValue={() => {}}
-        readonly
-      />
+      {isMonthlyChecklist ? (
+        <ChecklistView
+          monthId={planillaMonth.id}
+          items={items}
+          readOnly={false}
+          canDeleteDocs={true}
+        />
+      ) : (
+        <PlanillaGrid
+          planillaMonth={planillaMonth}
+          items={items}
+          entryMap={entryMap}
+          tempMap={tempMap}
+          complianceMTMap={complianceMTMap}
+          onSetValue={() => {}}
+          readonly
+        />
+      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ import {
   updateMonthStatus,
 } from '@/hooks/usePlanillas'
 import PlanillaGrid from '@/components/planilla/PlanillaGrid'
+import ChecklistView from '@/components/planilla/ChecklistView'
 import type { PlanillaMonth, TimeSlot } from '@/types'
 
 const MONTH_NAMES = [
@@ -120,8 +121,10 @@ function PlanillaDetail({
   const compItems    = items.filter(i => i.value_type === 'compliance')
   const tempItems    = items.filter(i => i.value_type === 'temperature')
   const cmtItems     = items.filter(i => i.value_type === 'compliance_mt')
-  const isTemperature = tempItems.length > 0 && compItems.length === 0 && cmtItems.length === 0
+  const isTemperature  = tempItems.length > 0 && compItems.length === 0 && cmtItems.length === 0
   const isComplianceMT = cmtItems.length > 0 && compItems.length === 0 && tempItems.length === 0
+  // Monthly checklist mode: all items have frequency='monthly'
+  const isMonthlyChecklist = items.length > 0 && items.every(i => i.frequency === 'monthly')
 
   // Compliance indicators
   const totalCells  = compItems.length * daysInMonth
@@ -201,27 +204,37 @@ function PlanillaDetail({
         </div>
       )}
 
-      <PlanillaGrid
-        planillaMonth={planillaMonth}
-        items={items}
-        entryMap={entryMap}
-        tempMap={tempMap}
-        complianceMTMap={complianceMTMap}
-        onSetValue={handleSetValue}
-        onSetNumericValue={handleSetNumeric}
-        onMarkTempClosed={(itemId, day, slot) => setTempClosed(itemId, day, slot)}
-        onSetComplianceMTValue={handleSetCMT}
-        readonly={isReadonly}
-      />
-
-      <p className="text-xs text-gray-400 text-center">
-        {isTemperature
-          ? 'Toca la celda M (mañana) o T (tarde) e ingresa los grados °C. Usa "Cerrado" si el establecimiento no abre ese día.'
-          : isComplianceMT
-          ? <>Toca cada celda para ciclar: <strong>C</strong> (Cumple) → <strong>NC</strong> (No Cumple) → <strong>C</strong> (Cerrado) → vacío</>
-          : <>Toca cada celda para ciclar: <strong>C</strong> (Cumple) → <strong>NC</strong> (No Cumple) → <strong>NA</strong> (No Aplica) → vacío</>
-        }
-      </p>
+      {isMonthlyChecklist ? (
+        <ChecklistView
+          monthId={planillaMonth.id}
+          items={items}
+          readOnly={isReadonly}
+          canDeleteDocs={false}
+        />
+      ) : (
+        <>
+          <PlanillaGrid
+            planillaMonth={planillaMonth}
+            items={items}
+            entryMap={entryMap}
+            tempMap={tempMap}
+            complianceMTMap={complianceMTMap}
+            onSetValue={handleSetValue}
+            onSetNumericValue={handleSetNumeric}
+            onMarkTempClosed={(itemId, day, slot) => setTempClosed(itemId, day, slot)}
+            onSetComplianceMTValue={handleSetCMT}
+            readonly={isReadonly}
+          />
+          <p className="text-xs text-gray-400 text-center">
+            {isTemperature
+              ? 'Toca la celda M (mañana) o T (tarde) e ingresa los grados °C. Usa "Cerrado" si el establecimiento no abre ese día.'
+              : isComplianceMT
+              ? <>Toca cada celda para ciclar: <strong>C</strong> (Cumple) → <strong>NC</strong> (No Cumple) → <strong>C</strong> (Cerrado) → vacío</>
+              : <>Toca cada celda para ciclar: <strong>C</strong> (Cumple) → <strong>NC</strong> (No Cumple) → <strong>NA</strong> (No Aplica) → vacío</>
+            }
+          </p>
+        </>
+      )}
 
       {msg && (
         <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${msg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>

@@ -3,7 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
   PlanillaTemplate, PlanillaItem, PlanillaMonth, PlanillaMonthItem,
-  PlanillaEntry, PlanillaAlert, PlanillaValue, TimeSlot, Profile, Area
+  PlanillaEntry, PlanillaAlert, PlanillaValue, TimeSlot, Profile, Area,
+  PlanillaDocument
 } from '@/types'
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -502,6 +503,122 @@ export async function assignPlanillaArea(monthId: string, areaId: string | null)
 // ── Update label on a planilla month ─────────────────────────────────────────
 export async function updatePlanillaMonthLabel(monthId: string, label: string | null) {
   return supabase.from('planilla_months').update({ label }).eq('id', monthId)
+}
+
+// ── Planilla documents (file uploads for requires_document items) ─────────────
+export function usePlanillaDocuments(monthId: string | null) {
+  const { tenant, profile } = useAuth()
+  const [documents, setDocuments] = useState<PlanillaDocument[]>([])
+  const [loading, setLoading]     = useState(true)
+
+  const load = useCallback(async () => {
+    if (!monthId) { setLoading(false); return }
+    const { data } = await supabase
+      .from('planilla_documents')
+      .select('*')
+      .eq('month_id', monthId)
+    setDocuments((data ?? []) as PlanillaDocument[])
+    setLoading(false)
+  }, [monthId])
+
+  useEffect(() => { load() }, [load])
+
+  // Upload a file and create the planilla_documents record
+  const uploadDocument = useCallback(async (
+    itemId: string,
+    file: File
+  ): Promise<PlanillaDocument | null> => {
+    if (!monthId || !tenant || !profile) return null
+
+    const ext       = file.name.split('.').pop() ?? 'bin'
+    const filePath  = `${tenant.id}/${monthId}/${itemId}.${ext}`
+    const fileType  = file.type.startsWith('image/') ? 'image' : 'pdf'
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('planilla-docs')
+      .upload(filePath, file, { upsert: true })
+
+    if (uploadError) { console.error('Upload error', uploadError); return null }
+
+    // Get public URL (signed URL alternative for private bucket)
+    const { data: urlData } = supabase.storage
+      .from('planilla-docs')
+      .getPublicUrl(filePath)
+
+    const fileUrl = urlData?.publicUrl ?? ''
+
+    // Upsert record in planilla_documents (one per month+item)
+    const { data: doc, error: dbError } = await supabase
+      .from('planilla_documents')
+      .upsert({
+        tenant_id:   tenant.id,
+        month_id:    monthId,
+        item_id:     itemId,
+        file_url:    fileUrl,
+        file_name:   file.name,
+        file_type:   fileType,
+        file_size:   file.size,
+        uploaded_by: profile.id,
+        uploaded_at: new Date().toISOString(),
+      }, { onConflict: 'month_id,item_id' })
+      .select()
+      .single()
+
+    if (dbError) { console.error('DB error', dbError); return null }
+
+    await load()
+    return doc as PlanillaDocument
+  }, [monthId, tenant, profile, load])
+
+  // Delete a document and its storage file
+  const deleteDocument = useCallback(async (docId: string, filePath: string) => {
+    await supabase.storage.from('planilla-docs').remove([filePath])
+    await supabase.from('planilla_documents').delete().eq('id', docId)
+    setDocuments(prev => prev.filter(d => d.id !== docId))
+  }, [])
+
+  // Get document for a specific item
+  const getDocForItem = useCallback((itemId: string): PlanillaDocument | null => {
+    return documents.find(d => d.item_id === itemId) ?? null
+  }, [documents])
+
+  return { documents, loading, uploadDocument, deleteDocument, getDocForItem, reload: load }
+}
+
+// ── All documents for a tenant (used in Fiscalizacion page) ──────────────────
+export function useAllPlanillaDocuments(year: number, month: number) {
+  const { tenant } = useAuth()
+  const [documents, setDocuments] = useState<(PlanillaDocument & { item_name?: string; template_name?: string })[]>([])
+  const [loading, setLoading]     = useState(true)
+
+  const load = useCallback(async () => {
+    if (!tenant) return
+    // Join through planilla_months to filter by tenant + period
+    const { data } = await supabase
+      .from('planilla_documents')
+      .select(`
+        *,
+        month:planilla_months!inner(
+          id, year, month, tenant_id, label,
+          template:planilla_templates(name)
+        ),
+        item:planilla_items(name)
+      `)
+      .eq('tenant_id', tenant.id)
+      .eq('month.year', year)
+      .eq('month.month', month)
+    setDocuments((data ?? []).map((d: any) => ({
+      ...d,
+      item_name:     d.item?.name ?? '',
+      template_name: d.month?.template?.name ?? '',
+    })))
+    setLoading(false)
+  }, [tenant, year, month])
+
+  useEffect(() => { load() }, [load])
+
+  return { documents, loading, reload: load }
 }
 
 // ── Month items (junction table) ─────────────────────────────────────────────
