@@ -13,10 +13,14 @@
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   HeadingLevel, AlignmentType, BorderStyle, WidthType, ShadingType,
-  LevelFormat, Header, Footer, PageNumber, VerticalAlign,
+  LevelFormat, Header, Footer, PageNumber, VerticalAlign, ImageRun,
 } from 'docx'
 import { saveAs } from 'file-saver'
 import type { Tenant } from '@/types'
+import { supabase } from '@/lib/supabase'
+
+// ── Internal type: Tenant + pre-fetched binary signature ──────────────────────
+type TenantDoc = Tenant & { _sigData?: Uint8Array }
 
 // ── Colour palette ────────────────────────────────────────────────────────────
 const CG  = '1B5E20'   // POE header (dark green)
@@ -96,9 +100,9 @@ const STYLES = (color: string) => ({
 })
 
 // ── Establishment identity block (appears after the title banner) ─────────────
-function estBlock(tenant: Tenant, colBg: string): Paragraph[] {
+function estBlock(tenant: TenantDoc, colBg: string): (Paragraph | Table)[] {
   const today = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })
-  const rows: [string, string][] = [
+  const textRows: [string, string][] = [
     ['Razón social / Establecimiento', tenant.name],
     ['RUT',                             tenant.rut                  || '—'],
     ['Dirección',                       [tenant.address, tenant.city].filter(Boolean).join(', ') || '—'],
@@ -109,16 +113,43 @@ function estBlock(tenant: Tenant, colBg: string): Paragraph[] {
     ['Fecha de emisión del documento',  today],
   ]
   const w1 = 3200, w2 = 6160
+
+  // Build signature row if binary data was pre-fetched
+  const sigRow = tenant._sigData
+    ? new TableRow({
+        children: [
+          dCell('Firma del Responsable BPM', w1, 'F5F5F5', true),
+          new TableCell({
+            width: { size: w2, type: WidthType.DXA },
+            borders: bdrs(),
+            shading: { fill: 'F5F5F5', type: ShadingType.CLEAR },
+            margins: { top: 100, bottom: 100, left: 120, right: 120 },
+            verticalAlign: VerticalAlign.CENTER,
+            children: [new Paragraph({
+              children: [
+                new ImageRun({
+                  data: tenant._sigData,
+                  transformation: { width: 160, height: 65 },
+                  type: 'png',
+                }),
+              ],
+            })],
+          }),
+        ],
+      })
+    : null
+
   return [
     new Table({
       width: { size: 9360, type: WidthType.DXA },
       columnWidths: [w1, w2],
       rows: [
         new TableRow({ children: [hCell('Datos del Establecimiento', 9360, colBg)] }),
-        ...rows.map(([label, value], i) => new TableRow({ children: [
+        ...textRows.map(([label, value], i) => new TableRow({ children: [
           dCell(label, w1, i % 2 === 0 ? 'F5F5F5' : 'FAFAFA', true),
           dCell(value, w2, i % 2 === 0 ? 'F5F5F5' : 'FAFAFA'),
         ]})),
+        ...(sigRow ? [sigRow] : []),
       ],
     }),
     sp(),
@@ -172,7 +203,7 @@ function criteriaTable(rows: [string, string, string][], bg: string): Table {
 }
 
 // ── Page setup ────────────────────────────────────────────────────────────────
-function pageSetup(tenant: Tenant, headerLabel: string, colBg: string) {
+function pageSetup(tenant: TenantDoc, headerLabel: string, colBg: string) {
   const short = tenant.name.length > 35 ? tenant.name.slice(0, 35) + '…' : tenant.name
   return {
     properties: { page: { size: { width: 11906, height: 16838 },
@@ -205,7 +236,7 @@ function pageSetup(tenant: Tenant, headerLabel: string, colBg: string) {
 
 function buildDoc(
   tipo: string, codigo: string, titulo: string, subTitulo: string,
-  area: string, bg: string, sc: string, tenant: Tenant,
+  area: string, bg: string, sc: string, tenant: TenantDoc,
   contentFn: (sc: string) => (Paragraph | Table)[]
 ): Document {
   return new Document({
@@ -226,7 +257,7 @@ function buildDoc(
 }
 
 // ── POE-BPM-HIG-001 ──────────────────────────────────────────────────────────
-function buildHigiene(tenant: Tenant): Document {
+function buildHigiene(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR — POE', 'POE-BPM-HIG-001',
     'Higiene Personal del Manipulador', 'Presentación · Lavado de manos · Conducta · Salud',
     'Cocina / Todas las áreas', CG, CG2, tenant, (sc) => [
@@ -279,7 +310,7 @@ function buildHigiene(tenant: Tenant): Document {
 }
 
 // ── POE-BPM-COC-001 ──────────────────────────────────────────────────────────
-function buildCoccion(tenant: Tenant): Document {
+function buildCoccion(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR — POE', 'POE-BPM-COC-001',
     'Control de Cocción y Temperaturas Críticas', 'Temperaturas mínimas · Verificación · Registros',
     'Cocina caliente', CG, CG2, tenant, (sc) => [
@@ -331,7 +362,7 @@ function buildCoccion(tenant: Tenant): Document {
 }
 
 // ── POE-BPM-ENF-001 ──────────────────────────────────────────────────────────
-function buildEnfriamiento(tenant: Tenant): Document {
+function buildEnfriamiento(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR — POE', 'POE-BPM-ENF-001',
     'Enfriamiento Rápido y Recalentamiento', 'Zona de peligro (5–60°C) · Regla de los 2 pasos',
     'Cocina / Cámaras', CG, CG2, tenant, (sc) => [
@@ -374,7 +405,7 @@ function buildEnfriamiento(tenant: Tenant): Document {
 }
 
 // ── POE-BPM-CAR-001 ──────────────────────────────────────────────────────────
-function buildCarnes(tenant: Tenant): Document {
+function buildCarnes(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR — POE', 'POE-BPM-CAR-001',
     'Manejo Higiénico de Carnes', 'Recepción · Almacenamiento · Descongelación · Procesamiento',
     'Cocina / Bodega refrigerada', CG, CG2, tenant, (sc) => [
@@ -421,7 +452,7 @@ function buildCarnes(tenant: Tenant): Document {
 }
 
 // ── POE-BPM-VEG-001 ──────────────────────────────────────────────────────────
-function buildVerduras(tenant: Tenant): Document {
+function buildVerduras(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR — POE', 'POE-BPM-VEG-001',
     'Manejo Higiénico de Verduras y Hortalizas', 'Recepción · Almacenamiento · Lavado · Desinfección',
     'Cocina / Zona de lavado', CG, CG2, tenant, (sc) => [
@@ -458,7 +489,7 @@ function buildVerduras(tenant: Tenant): Document {
 }
 
 // ── POE-BPM-OTR-001 ──────────────────────────────────────────────────────────
-function buildOtros(tenant: Tenant): Document {
+function buildOtros(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR — POE', 'POE-BPM-OTR-001',
     'Manejo Higiénico de Otros Productos', 'Lácteos · Huevos · Pescados · Abarrotes · Congelados',
     'Cocina / Bodega', CG, CG2, tenant, (sc) => [
@@ -503,7 +534,7 @@ function buildOtros(tenant: Tenant): Document {
 }
 
 // ── POE-BPM-ALE-001 ──────────────────────────────────────────────────────────
-function buildAlergenos(tenant: Tenant): Document {
+function buildAlergenos(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR — POE', 'POE-BPM-ALE-001',
     'Gestión de Alérgenos', 'Identificación · Comunicación · Prevención de contaminación cruzada',
     'Cocina / Servicio / Atención', 'C62828', 'C62828', tenant, (sc) => [
@@ -547,7 +578,7 @@ function buildAlergenos(tenant: Tenant): Document {
 }
 
 // ── POE-BPM-SER-001 ──────────────────────────────────────────────────────────
-function buildServicio(tenant: Tenant): Document {
+function buildServicio(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR — POE', 'POE-BPM-SER-001',
     'Servicio de Alimentos y Mantención en Temperatura', 'Bufet · Línea de servicio · Delivery · Sobrantes',
     'Sala / Cocina / Despacho', CG, CG2, tenant, (sc) => [
@@ -588,7 +619,7 @@ function buildServicio(tenant: Tenant): Document {
 }
 
 // ── POES-LIM-001 ─────────────────────────────────────────────────────────────
-function buildLimpieza(tenant: Tenant): Document {
+function buildLimpieza(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR DE SANITIZACIÓN — POES', 'POES-LIM-001',
     'Limpieza y Desinfección de Superficies y Utensilios', 'Mesones · Tablas · Cuchillos · Utensilios',
     'Cocina / Todas las áreas', CB, CB2, tenant, (sc) => [
@@ -626,7 +657,7 @@ function buildLimpieza(tenant: Tenant): Document {
 }
 
 // ── POES-EQP-001 ─────────────────────────────────────────────────────────────
-function buildEquipos(tenant: Tenant): Document {
+function buildEquipos(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR DE SANITIZACIÓN — POES', 'POES-EQP-001',
     'Limpieza y Desinfección de Equipos de Cocina', 'Hornos · Freidoras · Parrillas · Refrigeración',
     'Cocina / Bodega', CB, CB2, tenant, (sc) => [
@@ -666,7 +697,7 @@ function buildEquipos(tenant: Tenant): Document {
 }
 
 // ── POES-INS-001 ─────────────────────────────────────────────────────────────
-function buildInstalaciones(tenant: Tenant): Document {
+function buildInstalaciones(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR DE SANITIZACIÓN — POES', 'POES-INS-001',
     'Limpieza de Instalaciones', 'Pisos · Paredes · Techos · Baños · Sala de comensales',
     'Todas las instalaciones', CB, CB2, tenant, (sc) => [
@@ -710,7 +741,7 @@ function buildInstalaciones(tenant: Tenant): Document {
 }
 
 // ── POES-PLG-001 ─────────────────────────────────────────────────────────────
-function buildPlagas(tenant: Tenant): Document {
+function buildPlagas(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR DE SANITIZACIÓN — POES', 'POES-PLG-001',
     'Control Integrado de Plagas', 'Prevención · Monitoreo · Empresa autorizada SAG',
     'Todas las instalaciones', CB, CB2, tenant, (sc) => [
@@ -752,7 +783,7 @@ function buildPlagas(tenant: Tenant): Document {
 }
 
 // ── POES-PER-001 ─────────────────────────────────────────────────────────────
-function buildPersonal(tenant: Tenant): Document {
+function buildPersonal(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR DE SANITIZACIÓN — POES', 'POES-PER-001',
     'Higiene y Vestuario del Personal', 'Uniforme · Ropa de trabajo · Ingreso · Visitantes',
     'Todas las áreas', CB, CB2, tenant, (sc) => [
@@ -788,7 +819,7 @@ function buildPersonal(tenant: Tenant): Document {
 }
 
 // ── POES-RES-001 ─────────────────────────────────────────────────────────────
-function buildResiduos(tenant: Tenant): Document {
+function buildResiduos(tenant: TenantDoc): Document {
   return buildDoc('PROCEDIMIENTO OPERATIVO ESTÁNDAR DE SANITIZACIÓN — POES', 'POES-RES-001',
     'Manejo y Disposición de Residuos Sólidos', 'Clasificación · Almacenamiento · Retiro · Reciclaje',
     'Cocina / Sala / Área exterior', CB, CB2, tenant, (sc) => [
@@ -845,7 +876,7 @@ export type DocCode =
   | 'POES-LIM-001' | 'POES-EQP-001' | 'POES-INS-001'
   | 'POES-PLG-001' | 'POES-PER-001' | 'POES-RES-001'
 
-const BUILDERS: Record<DocCode, (t: Tenant) => Document> = {
+const BUILDERS: Record<DocCode, (t: TenantDoc) => Document> = {
   'POE-BPM-HIG-001': buildHigiene,
   'POE-BPM-COC-001': buildCoccion,
   'POE-BPM-ENF-001': buildEnfriamiento,
@@ -862,6 +893,26 @@ const BUILDERS: Record<DocCode, (t: Tenant) => Document> = {
   'POES-RES-001':    buildResiduos,
 }
 
+// ── Pre-fetch signature from Supabase Storage ─────────────────────────────────
+async function fetchSignatureData(storagePath: string): Promise<Uint8Array | undefined> {
+  try {
+    const { data, error } = await supabase.storage
+      .from('program-documents')
+      .download(storagePath)
+    if (error || !data) return undefined
+    const arrayBuf = await data.arrayBuffer()
+    return new Uint8Array(arrayBuf)
+  } catch {
+    return undefined
+  }
+}
+
+async function buildTenantDoc(tenant: Tenant): Promise<TenantDoc> {
+  if (!tenant.signature_bpm_url) return tenant
+  const sigData = await fetchSignatureData(tenant.signature_bpm_url)
+  return { ...tenant, _sigData: sigData }
+}
+
 /**
  * Generate and trigger browser download of a BPM document as DOCX.
  * @param code   Document code (e.g. 'POE-BPM-HIG-001')
@@ -870,7 +921,8 @@ const BUILDERS: Record<DocCode, (t: Tenant) => Document> = {
 export async function downloadDoc(code: DocCode, tenant: Tenant): Promise<void> {
   const builder = BUILDERS[code]
   if (!builder) throw new Error(`Unknown document code: ${code}`)
-  const doc  = builder(tenant)
+  const tenantDoc = await buildTenantDoc(tenant)
+  const doc  = builder(tenantDoc)
   const blob = await Packer.toBlob(doc)
   const safe = (tenant.name || 'establecimiento').replace(/[^a-z0-9]/gi, '_').slice(0, 30)
   saveAs(blob, `${code}_${safe}.docx`)
@@ -882,5 +934,6 @@ export async function downloadDoc(code: DocCode, tenant: Tenant): Promise<void> 
 export async function buildDocBlob(code: DocCode, tenant: Tenant): Promise<Blob> {
   const builder = BUILDERS[code]
   if (!builder) throw new Error(`Unknown document code: ${code}`)
-  return Packer.toBlob(builder(tenant))
+  const tenantDoc = await buildTenantDoc(tenant)
+  return Packer.toBlob(builder(tenantDoc))
 }

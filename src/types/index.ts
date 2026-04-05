@@ -19,6 +19,7 @@ export interface Tenant {
   resolucion_sanitaria?: string
   responsible_bpm?: string
   cargo_responsable?: string
+  signature_bpm_url?: string
   plan: SubscriptionPlan
   plan_expires_at?: string
   stripe_customer_id?: string

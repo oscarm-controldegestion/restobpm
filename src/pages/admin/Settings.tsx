@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { User, Lock, Building2, CheckCircle, AlertCircle, Users, Pencil, Trash2, Plus } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { User, Lock, Building2, CheckCircle, AlertCircle, Users, Pencil, Trash2, Plus, Upload, X, ImageIcon } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useWorkers } from '@/hooks/usePlanillas'
@@ -39,6 +39,11 @@ export default function Settings() {
   })
   const [savingLocal, setSavingLocal] = useState(false)
   const [msgLocal, setMsgLocal]       = useState<{ ok: boolean; text: string } | null>(null)
+
+  // ── Estado firma BPM ──
+  const [uploadingSig, setUploadingSig] = useState(false)
+  const [sigPreview, setSigPreview]     = useState<string | null>(null)   // blob URL for preview
+  const sigInputRef = useRef<HTMLInputElement>(null)
 
   // ── Guardar perfil ──────────────────────────────────────────────────────────
   const handleSavePerfil = async (e: React.FormEvent) => {
@@ -88,6 +93,76 @@ export default function Settings() {
       setPwd({ nueva: '', confirmar: '' })
     }
     setSavingPwd(false)
+  }
+
+  // ── Subir firma del responsable BPM ────────────────────────────────────────
+  const handleSigUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !tenant) return
+
+    // Show local preview immediately
+    const previewUrl = URL.createObjectURL(file)
+    setSigPreview(previewUrl)
+    setUploadingSig(true)
+    setMsgLocal(null)
+
+    try {
+      // Convert to PNG via canvas for consistent format
+      const img = await new Promise<HTMLImageElement>((res, rej) => {
+        const i = new Image()
+        i.onload = () => res(i)
+        i.onerror = rej
+        i.src = previewUrl
+      })
+      const canvas  = document.createElement('canvas')
+      canvas.width  = img.naturalWidth
+      canvas.height = img.naturalHeight
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0)
+      const blob = await new Promise<Blob>((res) => canvas.toBlob(b => res(b!), 'image/png'))
+
+      const storagePath = `${tenant.id}/firma_bpm.png`
+      const { error: uploadError } = await supabase.storage
+        .from('program-documents')
+        .upload(storagePath, blob, { upsert: true, contentType: 'image/png' })
+
+      if (uploadError) throw uploadError
+
+      const { error: dbError } = await supabase
+        .from('tenants')
+        .update({ signature_bpm_url: storagePath })
+        .eq('id', tenant.id)
+
+      if (dbError) throw dbError
+
+      await refreshTenant()
+      setMsgLocal({ ok: true, text: 'Firma del responsable actualizada. Se incluirá en los documentos.' })
+    } catch (err) {
+      console.error(err)
+      setSigPreview(null)
+      setMsgLocal({ ok: false, text: 'No se pudo subir la firma. Intenta de nuevo.' })
+    } finally {
+      setUploadingSig(false)
+      // reset input so same file can be re-selected
+      if (sigInputRef.current) sigInputRef.current.value = ''
+    }
+  }
+
+  // ── Eliminar firma ──────────────────────────────────────────────────────────
+  const handleRemoveSig = async () => {
+    if (!tenant) return
+    setUploadingSig(true)
+    try {
+      await supabase.storage.from('program-documents').remove([`${tenant.id}/firma_bpm.png`])
+      await supabase.from('tenants').update({ signature_bpm_url: null }).eq('id', tenant.id)
+      await refreshTenant()
+      setSigPreview(null)
+      setMsgLocal({ ok: true, text: 'Firma eliminada.' })
+    } catch {
+      setMsgLocal({ ok: false, text: 'No se pudo eliminar la firma.' })
+    } finally {
+      setUploadingSig(false)
+    }
   }
 
   // ── Guardar establecimiento ─────────────────────────────────────────────────
@@ -408,6 +483,67 @@ export default function Settings() {
                     placeholder="Ej: Jefe de Cocina / Encargado BPM"
                   />
                 </div>
+              </div>
+
+              {/* Firma del responsable */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">
+                  Firma del responsable
+                  <span className="ml-1 text-gray-400 font-normal">(se estampa en los documentos DOCX)</span>
+                </label>
+
+                {/* Preview actual */}
+                {(sigPreview || tenant?.signature_bpm_url) && !uploadingSig && (
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="border border-gray-200 rounded-lg p-2 bg-white inline-block">
+                      <img
+                        src={sigPreview ?? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/program-documents/${tenant?.signature_bpm_url}`}
+                        alt="Firma del responsable BPM"
+                        className="max-h-16 max-w-[220px] object-contain"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveSig}
+                      className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 transition-colors"
+                    >
+                      <X size={12} />
+                      Eliminar
+                    </button>
+                  </div>
+                )}
+
+                {uploadingSig && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                    <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                    Subiendo firma…
+                  </div>
+                )}
+
+                {/* Input oculto */}
+                <input
+                  ref={sigInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  className="hidden"
+                  onChange={handleSigUpload}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => sigInputRef.current?.click()}
+                  disabled={uploadingSig}
+                  className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50 transition-colors disabled:opacity-50"
+                >
+                  {tenant?.signature_bpm_url || sigPreview
+                    ? <><ImageIcon size={14} /> Cambiar firma</>
+                    : <><Upload size={14} /> Subir imagen de firma (PNG, JPG)</>
+                  }
+                </button>
+                <p className="text-xs text-gray-400 mt-1">
+                  Sube una imagen de la firma sobre fondo blanco para mejor resultado. Se convierte a PNG automáticamente.
+                </p>
               </div>
             </div>
 
