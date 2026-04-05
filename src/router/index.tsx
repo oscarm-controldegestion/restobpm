@@ -14,6 +14,7 @@ import NonConformities from '@/pages/supervisor/NonConformities'
 import Reports from '@/pages/supervisor/Reports'
 import PlanillasDashboard from '@/pages/supervisor/PlanillasDashboard'
 import Fiscalizacion from '@/pages/supervisor/Fiscalizacion'
+import Documentos from '@/pages/supervisor/Documentos'
 import Settings from '@/pages/admin/Settings'
 import Subscription from '@/pages/admin/Subscription'
 import LoadingScreen from '@/components/ui/LoadingScreen'
@@ -67,6 +68,7 @@ export default function AppRouter() {
           <Route path="supervisor/non-conformities" element={<ProtectedRoute allowedRoles={['admin','supervisor']}><NonConformities /></ProtectedRoute>} />
           <Route path="supervisor/reports"          element={<ProtectedRoute allowedRoles={['admin','supervisor']}><Reports /></ProtectedRoute>} />
           <Route path="supervisor/fiscalizacion"    element={<ProtectedRoute allowedRoles={['admin','supervisor']}><Fiscalizacion /></ProtectedRoute>} />
+          <Route path="supervisor/documentos"       element={<ProtectedRoute allowedRoles={['admin','supervisor']}><Documentos /></ProtectedRoute>} />
 
           {/* Operator */}
           <Route path="operator/planillas" element={<ProtectedRoute allowedRoles={['admin','supervisor','operator']}><OperatorPlanillas /></ProtectedRoute>} />
