@@ -26,6 +26,7 @@ function StatusChip({ status }: { status: PlanillaMonth['status'] }) {
   const cfg = {
     pending:     { label: 'Pendiente',    bg: 'bg-orange-50 text-orange-600' },
     in_progress: { label: 'En Progreso',  bg: 'bg-blue-50 text-blue-600' },
+    completed:   { label: 'Completada',   bg: 'bg-purple-50 text-purple-700' },
     signed:      { label: 'Firmada',      bg: 'bg-green-50 text-green-700' },
   }[status] ?? { label: status, bg: 'bg-gray-100 text-gray-500' }
 

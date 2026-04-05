@@ -192,6 +192,7 @@ function ItemFormModal({
         frequency,
         order_index: maxOrder + 1,
         active: true,
+        requires_document: false,
       })
     }
     setSaving(false)

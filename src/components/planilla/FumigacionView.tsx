@@ -219,7 +219,7 @@ export default function FumigacionView({ month, readOnly = false }: { month: Pla
                       </div>
                     </div>
                   )}
-                  {r.certificado_url && <FileText size={16} className="text-blue-500 shrink-0" title="Certificado adjunto" />}
+                  {r.certificado_url && <FileText size={16} className="text-blue-500 shrink-0" aria-label="Certificado adjunto" />}
                   {isExpanded ? <ChevronUp size={16} className="text-gray-400 shrink-0" /> : <ChevronDown size={16} className="text-gray-400 shrink-0" />}
                 </div>
                 {isExpanded && (
