@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   ClipboardList, Bell, BellOff, ChevronRight, ArrowLeft,
   Calendar, AlertTriangle, CheckCircle, Plus, Pencil,
@@ -557,6 +558,10 @@ export default function PlanillasDashboard() {
   const { alerts, markSeen, createAlert } = usePlanillaAlerts()
   const [selected, setSelected] = useState<PlanillaMonth | null>(null)
   const [alertSent, setAlertSent] = useState<string | null>(null)
+  const location = useLocation()
+
+  // Reset to list view when sidebar navigates to this same route
+  useEffect(() => { setSelected(null) }, [location.key])
 
   useEffect(() => {
     if (!loadingTpl && templates.length > 0 && !loadingMonths && months.length === 0) {
