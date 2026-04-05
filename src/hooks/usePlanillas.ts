@@ -586,6 +586,45 @@ export function usePlanillaDocuments(monthId: string | null) {
   return { documents, loading, uploadDocument, deleteDocument, getDocForItem, reload: load }
 }
 
+// ── Months for a date range (used in Fiscalizacion) ──────────────────────────
+export function usePlanillaMonthsRange(
+  fromYear: number, fromMonth: number,
+  toYear:   number, toMonth:   number
+) {
+  const { tenant } = useAuth()
+  const [months, setMonths]   = useState<PlanillaMonth[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    if (!tenant) return
+    // Build list of (year, month) pairs in range
+    const pairs: { year: number; month: number }[] = []
+    let y = fromYear, m = fromMonth
+    while (y < toYear || (y === toYear && m <= toMonth)) {
+      pairs.push({ year: y, month: m })
+      m++; if (m > 12) { m = 1; y++ }
+      if (pairs.length > 36) break // safety cap
+    }
+
+    if (pairs.length === 0) { setMonths([]); setLoading(false); return }
+
+    // Build OR filter
+    const filters = pairs.map(p => `and(year.eq.${p.year},month.eq.${p.month})`).join(',')
+    const { data } = await supabase
+      .from('planilla_months')
+      .select('*, template:planilla_templates(*)')
+      .eq('tenant_id', tenant.id)
+      .or(filters)
+      .order('year').order('month').order('created_at')
+
+    setMonths((data ?? []) as PlanillaMonth[])
+    setLoading(false)
+  }, [tenant, fromYear, fromMonth, toYear, toMonth])
+
+  useEffect(() => { load() }, [load])
+  return { months, loading, reload: load }
+}
+
 // ── All documents for a tenant (used in Fiscalizacion page) ──────────────────
 export function useAllPlanillaDocuments(year: number, month: number) {
   const { tenant } = useAuth()
