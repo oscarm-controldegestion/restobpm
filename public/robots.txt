@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /operator/
+Disallow: /supervisor/
+Disallow: /admin/
+Disallow: /superadmin/
+
+Sitemap: https://www.restobpm.cl/sitemap.xml
