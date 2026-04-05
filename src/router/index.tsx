@@ -21,6 +21,7 @@ import Subscription from '@/pages/admin/Subscription'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 import PrivacyPage from '@/pages/legal/PrivacyPage'
 import TermsPage from '@/pages/legal/TermsPage'
+import ContractPage from '@/pages/legal/ContractPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
 
 function ProtectedRoute({ children, allowedRoles }: { children: JSX.Element; allowedRoles?: string[] }) {
@@ -46,6 +47,7 @@ export default function AppRouter() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/privacidad"    element={<PrivacyPage />} />
         <Route path="/terminos"      element={<TermsPage />} />
+        <Route path="/contrato"      element={<ContractPage />} />
 
         {/* ── App (requiere autenticación) ─────────────────────────── */}
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

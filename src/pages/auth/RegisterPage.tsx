@@ -329,7 +329,7 @@ export default function RegisterPage() {
                 <strong>Período de prueba gratuito:</strong> Tendrás acceso completo durante 3 días. Sin necesidad de tarjeta de crédito.
               </div>
 
-              {/* Consent checkbox — Ley 19.628 Art.4 */}
+              {/* Consent checkbox — Ley 19.628 Art.4 + Contrato limitación responsabilidad */}
               <label className="flex items-start gap-3 cursor-pointer select-none">
                 <div className="mt-0.5 flex-shrink-0">
                   <input
@@ -343,13 +343,18 @@ export default function RegisterPage() {
                   He leído y acepto los{' '}
                   <Link to="/terminos" target="_blank" className="text-brand-700 hover:underline font-medium">
                     Términos de Servicio
-                  </Link>{' '}
-                  y la{' '}
+                  </Link>
+                  {', la '}
                   <Link to="/privacidad" target="_blank" className="text-brand-700 hover:underline font-medium">
                     Política de Privacidad
                   </Link>
-                  {' '}de RestoBPM. Declaro que tengo autorización para registrar datos personales de mis trabajadores
-                  de conformidad con la Ley N° 19.628.
+                  {' y el '}
+                  <Link to="/contrato" target="_blank" className="text-brand-700 hover:underline font-medium">
+                    Contrato de Limitación de Responsabilidad
+                  </Link>
+                  {' de RestoBPM, incluyendo que RestoBPM no es responsable por multas o sanciones de la SEREMI de Salud. '}
+                  Declaro que tengo autorización para registrar datos personales de mis trabajadores
+                  conforme a la Ley N° 19.628.
                 </span>
               </label>
 
