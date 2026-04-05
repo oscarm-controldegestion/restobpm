@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
   PlanillaTemplate, PlanillaItem, PlanillaMonth,
-  PlanillaEntry, PlanillaAlert, PlanillaValue
+  PlanillaEntry, PlanillaAlert, PlanillaValue, TimeSlot, Profile
 } from '@/types'
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -31,41 +31,93 @@ export function usePlanillaItems(templateId: string | null) {
   const [items, setItems]     = useState<PlanillaItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!templateId) { setLoading(false); return }
-    supabase
+    const { data } = await supabase
       .from('planilla_items')
       .select('*')
       .eq('template_id', templateId)
       .eq('active', true)
       .order('order_index')
-      .then(({ data }) => {
-        setItems((data ?? []) as PlanillaItem[])
-        setLoading(false)
-      })
+    setItems((data ?? []) as PlanillaItem[])
+    setLoading(false)
   }, [templateId])
 
-  return { items, loading }
+  useEffect(() => { load() }, [load])
+
+  return { items, loading, reload: load }
+}
+
+// ── All items for a template (including inactive, for management) ──────────────
+export function usePlanillaItemsAll(templateId: string | null) {
+  const [items, setItems]     = useState<PlanillaItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    if (!templateId) { setLoading(false); return }
+    const { data } = await supabase
+      .from('planilla_items')
+      .select('*')
+      .eq('template_id', templateId)
+      .order('order_index')
+    setItems((data ?? []) as PlanillaItem[])
+    setLoading(false)
+  }, [templateId])
+
+  useEffect(() => { load() }, [load])
+
+  return { items, loading, reload: load }
+}
+
+// ── Operators for current tenant ──────────────────────────────────────────────
+export function useTenantOperators() {
+  const { tenant } = useAuth()
+  const [operators, setOperators] = useState<Profile[]>([])
+  const [loading, setLoading]     = useState(true)
+
+  useEffect(() => {
+    if (!tenant) return
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .eq('role', 'operator')
+      .eq('active', true)
+      .order('full_name')
+      .then(({ data }) => {
+        setOperators((data ?? []) as Profile[])
+        setLoading(false)
+      })
+  }, [tenant])
+
+  return { operators, loading }
 }
 
 // ── Months for current tenant ─────────────────────────────────────────────────
-export function usePlanillaMonths(year: number, month: number) {
-  const { tenant } = useAuth()
+// If filterByCurrentUser=true, only returns months assigned to the current profile
+export function usePlanillaMonths(year: number, month: number, filterByCurrentUser = false) {
+  const { tenant, profile } = useAuth()
   const [months, setMonths]   = useState<PlanillaMonth[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     if (!tenant) return
-    const { data } = await supabase
+    let query = supabase
       .from('planilla_months')
       .select('*, template:planilla_templates(*)')
       .eq('tenant_id', tenant.id)
       .eq('year', year)
       .eq('month', month)
       .order('created_at')
+
+    if (filterByCurrentUser && profile) {
+      query = query.eq('assigned_to', profile.id)
+    }
+
+    const { data } = await query
     setMonths((data ?? []) as PlanillaMonth[])
     setLoading(false)
-  }, [tenant, year, month])
+  }, [tenant, profile, year, month, filterByCurrentUser])
 
   useEffect(() => { load() }, [load])
 
@@ -106,7 +158,7 @@ export function usePlanillaEntries(monthId: string | null) {
 
   useEffect(() => { load() }, [load])
 
-  // Upsert a single cell
+  // Upsert a compliance cell (C/NC/NA)
   const setValue = useCallback(async (
     itemId: string,
     day: number,
@@ -114,32 +166,72 @@ export function usePlanillaEntries(monthId: string | null) {
   ) => {
     if (!monthId || !profile) return
     await supabase.from('planilla_entries').upsert(
-      { month_id: monthId, item_id: itemId, day, value, updated_by: profile.id, updated_at: new Date().toISOString() },
-      { onConflict: 'month_id,item_id,day' }
+      {
+        month_id: monthId, item_id: itemId, day,
+        value, time_slot: null, numeric_value: null,
+        updated_by: profile.id, updated_at: new Date().toISOString()
+      },
+      { onConflict: 'month_id,item_id,day,time_slot' }
     )
-    // Optimistic update
     setEntries(prev => {
-      const idx = prev.findIndex(e => e.item_id === itemId && e.day === day)
-      if (idx >= 0) {
-        const next = [...prev]
-        next[idx] = { ...next[idx], value, updated_by: profile.id, updated_at: new Date().toISOString() }
-        return next
-      }
-      return [...prev, {
-        id: `${monthId}-${itemId}-${day}`,
-        month_id: monthId, item_id: itemId, day, value,
+      const idx = prev.findIndex(e => e.item_id === itemId && e.day === day && e.time_slot === null)
+      const updated: PlanillaEntry = {
+        id: idx >= 0 ? prev[idx].id : `${monthId}-${itemId}-${day}`,
+        month_id: monthId, item_id: itemId, day,
+        value, time_slot: null, numeric_value: null,
         updated_at: new Date().toISOString(), updated_by: profile.id
-      }]
+      }
+      if (idx >= 0) {
+        const next = [...prev]; next[idx] = updated; return next
+      }
+      return [...prev, updated]
     })
   }, [monthId, profile])
 
-  // Build a lookup map: item_id + day → value
+  // Upsert a temperature cell (numeric, with time slot)
+  const setNumericValue = useCallback(async (
+    itemId: string,
+    day: number,
+    timeSlot: TimeSlot,
+    numericValue: number | null
+  ) => {
+    if (!monthId || !profile) return
+    await supabase.from('planilla_entries').upsert(
+      {
+        month_id: monthId, item_id: itemId, day,
+        value: null, time_slot: timeSlot, numeric_value: numericValue,
+        updated_by: profile.id, updated_at: new Date().toISOString()
+      },
+      { onConflict: 'month_id,item_id,day,time_slot' }
+    )
+    setEntries(prev => {
+      const idx = prev.findIndex(e => e.item_id === itemId && e.day === day && e.time_slot === timeSlot)
+      const updated: PlanillaEntry = {
+        id: idx >= 0 ? prev[idx].id : `${monthId}-${itemId}-${day}-${timeSlot}`,
+        month_id: monthId, item_id: itemId, day,
+        value: null, time_slot: timeSlot, numeric_value: numericValue,
+        updated_at: new Date().toISOString(), updated_by: profile.id
+      }
+      if (idx >= 0) {
+        const next = [...prev]; next[idx] = updated; return next
+      }
+      return [...prev, updated]
+    })
+  }, [monthId, profile])
+
+  // Lookup: compliance entry (time_slot = null)
   const entryMap = useCallback((itemId: string, day: number): PlanillaValue | null => {
-    const e = entries.find(e => e.item_id === itemId && e.day === day)
+    const e = entries.find(e => e.item_id === itemId && e.day === day && e.time_slot === null)
     return e?.value ?? null
   }, [entries])
 
-  return { entries, loading, setValue, entryMap, reload: load }
+  // Lookup: temperature entry by slot
+  const tempMap = useCallback((itemId: string, day: number, timeSlot: TimeSlot): number | null => {
+    const e = entries.find(e => e.item_id === itemId && e.day === day && e.time_slot === timeSlot)
+    return e?.numeric_value ?? null
+  }, [entries])
+
+  return { entries, loading, setValue, setNumericValue, entryMap, tempMap, reload: load }
 }
 
 // ── Alerts ────────────────────────────────────────────────────────────────────
@@ -168,7 +260,6 @@ export function usePlanillaAlerts() {
     setAlerts(prev => prev.filter(a => a.id !== id))
   }, [])
 
-  // Create an alert (for supervisor use)
   const createAlert = useCallback(async (
     monthId: string, type: PlanillaAlert['type'], day?: number
   ) => {
@@ -195,4 +286,22 @@ export async function signPlanillaMonth(monthId: string, profileId: string, sign
 // ── Update month status ───────────────────────────────────────────────────────
 export async function updateMonthStatus(monthId: string, status: string) {
   return supabase.from('planilla_months').update({ status }).eq('id', monthId)
+}
+
+// ── Assign a planilla month to an operator ────────────────────────────────────
+export async function assignPlanillaMonth(monthId: string, profileId: string | null) {
+  return supabase.from('planilla_months').update({ assigned_to: profileId }).eq('id', monthId)
+}
+
+// ── CRUD for planilla items ───────────────────────────────────────────────────
+export async function createPlanillaItem(item: Omit<PlanillaItem, 'id'>) {
+  return supabase.from('planilla_items').insert(item).select().single()
+}
+
+export async function updatePlanillaItem(id: string, updates: Partial<PlanillaItem>) {
+  return supabase.from('planilla_items').update(updates).eq('id', id)
+}
+
+export async function deletePlanillaItem(id: string) {
+  return supabase.from('planilla_items').update({ active: false }).eq('id', id)
 }

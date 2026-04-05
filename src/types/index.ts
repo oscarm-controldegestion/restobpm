@@ -288,6 +288,8 @@ export type PlanillaFrequency = 'daily' | 'weekly' | 'monthly'
 export type PlanillaValue     = 'C' | 'NC' | 'NA'
 export type PlanillaStatus    = 'pending' | 'in_progress' | 'completed' | 'signed'
 export type AlertType         = 'not_started' | 'incomplete' | 'overdue'
+export type PlanillaValueType = 'compliance' | 'temperature'
+export type TimeSlot          = 'morning' | 'afternoon'
 
 export interface PlanillaTemplate {
   id: string
@@ -304,6 +306,8 @@ export interface PlanillaItem {
   template_id: string
   name: string
   frequency: PlanillaFrequency
+  value_type: PlanillaValueType
+  equipment_number: string | null
   order_index: number
   active: boolean
 }
@@ -331,6 +335,8 @@ export interface PlanillaEntry {
   item_id: string
   day: number
   value: PlanillaValue | null
+  time_slot: TimeSlot | null
+  numeric_value: number | null
   updated_at: string
   updated_by: string | null
 }
@@ -344,4 +350,15 @@ export interface PlanillaAlert {
   seen: boolean
   created_at: string
   month?: PlanillaMonth
+}
+
+export interface PlanillaComplianceStats {
+  template_id: string
+  template_name: string
+  total_expected: number
+  total_filled: number
+  total_c: number
+  total_nc: number
+  total_na: number
+  compliance_pct: number
 }
