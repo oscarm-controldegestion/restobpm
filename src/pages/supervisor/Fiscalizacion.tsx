@@ -418,7 +418,7 @@ export default function Fiscalizacion() {
           body { background: white !important; color: black !important; font-size: 11px; }
           .print\\:hidden  { display: none !important; }
           .print\\:block   { display: block !important; }
-          @page { margin: 1.5cm; size: A4 portrait; }
+          @page { margin: 1.5cm; size: letter portrait; }
         }
       `}</style>
     </div>
