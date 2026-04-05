@@ -19,21 +19,17 @@ function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate()
 }
 
-// Temperature color based on threshold (cold chain: ≤ -18 OK, fridge 0-8 OK, etc.)
-function tempCellStyle(val: number | null): string {
-  if (val === null) return 'bg-gray-100 text-gray-300'
-  return 'bg-blue-50 text-blue-800 font-semibold'
-}
-
+// ── Numeric temperature cell ──────────────────────────────────────────────────
 interface TempCellProps {
   value: number | null
   onSave: (v: number | null) => void
   readonly?: boolean
   isPast: boolean
   isFuture: boolean
+  isToday: boolean
 }
 
-function TempCell({ value, onSave, readonly, isPast, isFuture }: TempCellProps) {
+function TempCell({ value, onSave, readonly, isPast, isFuture, isToday }: TempCellProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -42,17 +38,14 @@ function TempCell({ value, onSave, readonly, isPast, isFuture }: TempCellProps) 
     if (readonly || isFuture) return
     setDraft(value !== null ? String(value) : '')
     setEditing(true)
-    setTimeout(() => inputRef.current?.focus(), 0)
+    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select() }, 0)
   }
 
   const commit = () => {
     setEditing(false)
-    const n = parseFloat(draft)
-    if (draft === '' || draft === '-') {
-      onSave(null)
-    } else if (!isNaN(n)) {
-      onSave(n)
-    }
+    if (draft === '' || draft === '-') { onSave(null); return }
+    const n = parseFloat(draft.replace(',', '.'))
+    if (!isNaN(n)) onSave(n)
   }
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -70,23 +63,32 @@ function TempCell({ value, onSave, readonly, isPast, isFuture }: TempCellProps) 
         onChange={e => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={handleKey}
-        className="w-10 h-5 text-center text-xs border border-blue-400 rounded bg-white outline-none px-0.5"
+        className="w-12 h-7 text-center text-xs border-2 border-blue-400 rounded bg-white outline-none font-mono"
       />
     )
   }
 
+  const filled = value !== null
+  const cellBase = 'w-12 h-7 rounded flex items-center justify-center text-xs font-mono leading-none transition-colors'
+  let cellStyle = ''
+  if (filled)         cellStyle = 'bg-blue-100 text-blue-800 font-bold border border-blue-200'
+  else if (isFuture)  cellStyle = 'bg-gray-50 text-gray-200'
+  else if (isToday)   cellStyle = 'bg-amber-50 border border-amber-200 text-amber-300'
+  else if (isPast)    cellStyle = 'bg-red-50 border border-red-100 text-red-300'  // no reading = non-compliance
+  else                cellStyle = 'bg-gray-50 text-gray-300'
+
   return (
     <div
       onClick={startEdit}
-      className={`w-10 h-5 rounded flex items-center justify-center text-xs leading-none
-        ${readonly || isFuture ? 'cursor-default' : 'cursor-pointer hover:brightness-90'}
-        ${value !== null ? tempCellStyle(value) : isPast ? 'bg-red-100 text-red-300' : 'bg-gray-100 text-gray-300'}`}
+      title={!readonly && !isFuture ? 'Toca para ingresar temperatura (°C)' : undefined}
+      className={`${cellBase} ${cellStyle} ${!readonly && !isFuture ? 'cursor-pointer hover:ring-2 hover:ring-blue-300' : 'cursor-default'}`}
     >
-      {value !== null ? `${value}°` : isPast ? '·' : ''}
+      {filled ? `${value}°` : (isPast && !isFuture ? '—' : '')}
     </div>
   )
 }
 
+// ── Props ─────────────────────────────────────────────────────────────────────
 interface Props {
   planillaMonth: PlanillaMonth
   items: PlanillaItem[]
@@ -97,6 +99,7 @@ interface Props {
   readonly?: boolean
 }
 
+// ── Grid ──────────────────────────────────────────────────────────────────────
 export default function PlanillaGrid({
   planillaMonth, items, entryMap, tempMap, onSetValue, onSetNumericValue, readonly
 }: Props) {
@@ -114,187 +117,223 @@ export default function PlanillaGrid({
     onSetValue(itemId, day, next)
   }, [onSetValue, readonly])
 
-  // Compliance % per compliance-type item
   const itemCompliance = useCallback((item: PlanillaItem) => {
-    let c = 0, nc = 0, na = 0, filled = 0
+    let c = 0, filled = 0
     for (const d of days) {
       const v = entryMap(item.id, d)
-      if (v === 'C')  { c++; filled++ }
-      if (v === 'NC') { nc++; filled++ }
-      if (v === 'NA') { na++; filled++ }
+      if (v) { filled++; if (v === 'C') c++ }
     }
-    return { c, nc, na, filled, total: days.length }
+    return { c, filled, total: days.length }
   }, [days, entryMap])
 
-  // For temperature: count filled slots (2 per day)
-  const tempCompletion = useCallback((item: PlanillaItem) => {
+  const slotCompletion = useCallback((itemId: string, slot: TimeSlot) => {
     let filled = 0
-    const total = days.length * 2
-    for (const d of days) {
-      if (tempMap(item.id, d, 'morning') !== null) filled++
-      if (tempMap(item.id, d, 'afternoon') !== null) filled++
-    }
-    return { filled, total }
+    for (const d of days) { if (tempMap(itemId, d, slot) !== null) filled++ }
+    return { filled, total: days.length }
   }, [days, tempMap])
 
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
       <table className="min-w-max text-xs border-collapse">
+
+        {/* ── HEADER ── */}
         <thead>
           <tr className="bg-gray-800 text-white">
-            <th className="sticky left-0 z-20 bg-gray-800 text-left px-3 py-2 min-w-[180px] max-w-[220px] font-semibold border-r border-gray-600">
-              Ítem / Equipo
+            <th className="sticky left-0 z-20 bg-gray-800 text-left px-3 py-2 min-w-[210px] max-w-[250px] font-semibold border-r border-gray-600">
+              Ítem
             </th>
-            <th className="px-2 py-2 font-semibold border-r border-gray-600 min-w-[36px] text-center">Fr.</th>
+            <th className="px-2 py-2 font-semibold border-r border-gray-600 min-w-[28px] text-center text-gray-400 text-[10px]">Fr.</th>
             {days.map(d => (
               <th
                 key={d}
-                className={`px-1 py-2 font-semibold min-w-[44px] text-center border-r border-gray-600 ${
+                className={`px-0 py-2 font-semibold min-w-[52px] text-center border-r border-gray-600 ${
                   d === currentDay ? 'bg-amber-500 text-gray-900' : ''
                 }`}
               >
                 {d}
               </th>
             ))}
-            <th className="px-2 py-2 font-semibold min-w-[70px] text-center bg-gray-700">
-              Cumpl.
+            <th className="px-2 py-2 font-semibold min-w-[64px] text-center bg-gray-700 text-[10px] uppercase tracking-wide">
+              Registro
             </th>
           </tr>
         </thead>
+
+        {/* ── BODY ── */}
         <tbody>
           {items.map((item, rowIdx) => {
-            const isTemp  = item.value_type === 'temperature'
-            const bgEven  = rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+            const isTemp = item.value_type === 'temperature'
+            const bg     = rowIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50'
 
             if (isTemp) {
-              const comp = tempCompletion(item)
+              // ── Temperature item → 2 rows (M and T) ──────────────────────
+              const mStats = slotCompletion(item.id, 'morning')
+              const tStats = slotCompletion(item.id, 'afternoon')
+              const itemLabel = `${item.equipment_number ? `#${item.equipment_number} — ` : ''}${item.name}`
+
               return (
-                <tr key={item.id} className={bgEven}>
-                  {/* Item name — sticky */}
-                  <td className={`sticky left-0 z-10 border-r border-gray-200 px-3 py-1 font-medium text-gray-800 truncate max-w-[220px] ${bgEven}`}>
-                    <div className="flex items-center gap-1">
-                      <span className="truncate">{item.name}</span>
-                      {item.equipment_number && (
-                        <span className="shrink-0 text-xs bg-blue-100 text-blue-700 px-1 rounded font-mono">
-                          #{item.equipment_number}
+                <>
+                  {/* Mañana row */}
+                  <tr key={`${item.id}-m`} className={bg}>
+                    <td className={`sticky left-0 z-10 border-r border-gray-200 px-2 py-1.5 ${bg}`}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-600 text-white text-[11px] font-extrabold shadow-sm">
+                          M
                         </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-blue-500 font-normal">Temperatura °C</div>
-                  </td>
-
-                  {/* Frequency */}
-                  <td className={`text-center border-r border-gray-200 py-1 font-bold ${FREQ_COLOR[item.frequency]}`}>
-                    {FREQ_LABEL[item.frequency]}
-                  </td>
-
-                  {/* Day cells — 2 stacked (M/T) */}
-                  {days.map(d => {
-                    const isPast   = d < currentDay || !isCurrentMonth
-                    const isFuture = isCurrentMonth && d > currentDay
-                    return (
-                      <td
-                        key={d}
-                        className={`border-r border-gray-100 text-center px-0.5 py-1 ${
-                          d === currentDay ? 'border-l-2 border-r-2 border-amber-400 bg-amber-50/30' : ''
-                        }`}
-                      >
-                        <div className="flex flex-col gap-0.5 items-center">
-                          <div className="flex items-center gap-0.5">
-                            <span className="text-[9px] text-gray-400 w-3">M</span>
+                        <span className="truncate font-semibold text-gray-800 text-xs">{itemLabel}</span>
+                      </div>
+                    </td>
+                    <td className={`text-center border-r border-gray-200 font-bold ${FREQ_COLOR[item.frequency]}`}>
+                      {FREQ_LABEL[item.frequency]}
+                    </td>
+                    {days.map(d => {
+                      const isPast   = isCurrentMonth ? d < currentDay : year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth() + 1)
+                      const isFuture = isCurrentMonth && d > currentDay
+                      const isToday  = d === currentDay
+                      return (
+                        <td key={d} className={`border-r border-gray-100 px-0.5 py-1 ${isToday ? 'bg-amber-50/40' : ''}`}>
+                          <div className="flex justify-center">
                             <TempCell
                               value={tempMap(item.id, d, 'morning')}
                               onSave={v => onSetNumericValue?.(item.id, d, 'morning', v)}
                               readonly={readonly}
                               isPast={isPast}
                               isFuture={isFuture}
+                              isToday={isToday}
                             />
                           </div>
-                          <div className="flex items-center gap-0.5">
-                            <span className="text-[9px] text-gray-400 w-3">T</span>
+                        </td>
+                      )
+                    })}
+                    <td className="text-center px-1 py-1 border-l border-gray-200 bg-gray-50 whitespace-nowrap">
+                      <span className={`font-bold text-xs ${mStats.filled >= mStats.total ? 'text-green-600' : mStats.filled > 0 ? 'text-amber-600' : 'text-red-400'}`}>
+                        {mStats.filled}/{mStats.total}
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* Tarde row */}
+                  <tr key={`${item.id}-t`} className={`${bg} border-b-2 border-gray-200`}>
+                    <td className={`sticky left-0 z-10 border-r border-gray-200 px-2 py-1.5 ${bg}`}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-orange-500 text-white text-[11px] font-extrabold shadow-sm">
+                          T
+                        </span>
+                        <span className="truncate text-gray-500 italic text-xs">{itemLabel}</span>
+                      </div>
+                    </td>
+                    <td className="text-center border-r border-gray-200 text-gray-300">—</td>
+                    {days.map(d => {
+                      const isPast   = isCurrentMonth ? d < currentDay : year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth() + 1)
+                      const isFuture = isCurrentMonth && d > currentDay
+                      const isToday  = d === currentDay
+                      return (
+                        <td key={d} className={`border-r border-gray-100 px-0.5 py-1 ${isToday ? 'bg-amber-50/40' : ''}`}>
+                          <div className="flex justify-center">
                             <TempCell
                               value={tempMap(item.id, d, 'afternoon')}
                               onSave={v => onSetNumericValue?.(item.id, d, 'afternoon', v)}
                               readonly={readonly}
                               isPast={isPast}
                               isFuture={isFuture}
+                              isToday={isToday}
                             />
                           </div>
-                        </div>
-                      </td>
-                    )
-                  })}
-
-                  {/* Completion */}
-                  <td className="text-center px-2 py-1 border-l border-gray-200 bg-gray-50">
-                    <span className={`font-bold text-xs ${comp.filled >= comp.total ? 'text-green-600' : comp.filled > 0 ? 'text-amber-600' : 'text-gray-300'}`}>
-                      {comp.filled}/{comp.total}
-                    </span>
-                  </td>
-                </tr>
+                        </td>
+                      )
+                    })}
+                    <td className="text-center px-1 py-1 border-l border-gray-200 bg-gray-50 whitespace-nowrap">
+                      <span className={`font-bold text-xs ${tStats.filled >= tStats.total ? 'text-green-600' : tStats.filled > 0 ? 'text-amber-600' : 'text-red-400'}`}>
+                        {tStats.filled}/{tStats.total}
+                      </span>
+                    </td>
+                  </tr>
+                </>
               )
             }
 
-            // ── Compliance row ──────────────────────────────────────────────
+            // ── Compliance row (C / NC / NA) ──────────────────────────────
             const stats = itemCompliance(item)
             const pct   = stats.filled > 0 ? Math.round((stats.c / stats.filled) * 100) : null
 
             return (
-              <tr key={item.id} className={bgEven}>
-                <td className={`sticky left-0 z-10 border-r border-gray-200 px-3 py-1.5 font-medium text-gray-800 truncate max-w-[220px] ${bgEven}`}>
+              <tr key={item.id} className={bg}>
+                <td className={`sticky left-0 z-10 border-r border-gray-200 px-3 py-2 font-medium text-gray-800 truncate max-w-[250px] ${bg}`}>
                   {item.name}
                 </td>
-                <td className={`text-center border-r border-gray-200 py-1.5 font-bold ${FREQ_COLOR[item.frequency]}`}>
+                <td className={`text-center border-r border-gray-200 font-bold ${FREQ_COLOR[item.frequency]}`}>
                   {FREQ_LABEL[item.frequency]}
                 </td>
-
                 {days.map(d => {
                   const val      = entryMap(item.id, d)
-                  const isPast   = d < currentDay || !isCurrentMonth
+                  const isPast   = isCurrentMonth ? d < currentDay : year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth() + 1)
                   const isFuture = isCurrentMonth && d > currentDay
                   return (
                     <td
                       key={d}
-                      onClick={() => handleTap(item.id, d, val)}
-                      className={`border-r border-gray-100 text-center transition-colors select-none ${
-                        readonly || isFuture ? 'cursor-default' : 'cursor-pointer hover:brightness-90'
-                      } ${d === currentDay ? 'border-l-2 border-r-2 border-amber-400' : ''}`}
+                      onClick={() => !readonly && !isFuture && handleTap(item.id, d, val)}
+                      className={`border-r border-gray-100 text-center select-none transition-colors ${
+                        !readonly && !isFuture ? 'cursor-pointer' : 'cursor-default'
+                      } ${d === currentDay ? 'bg-amber-50/40' : ''}`}
                     >
-                      <div className={`mx-auto w-8 h-6 rounded flex items-center justify-center text-xs ${
-                        val ? VALUE_STYLE[val] : isPast && !val ? 'bg-red-100 text-red-300' : 'bg-gray-100 text-gray-300'
+                      <div className={`mx-auto w-9 h-7 rounded flex items-center justify-center text-xs ${
+                        val ? VALUE_STYLE[val]
+                            : isPast ? 'bg-red-50 text-red-300 border border-red-100'
+                            : 'bg-gray-100 text-gray-300'
                       }`}>
-                        {val ?? (isPast ? '·' : '')}
+                        {val ?? (isPast ? '—' : '')}
                       </div>
                     </td>
                   )
                 })}
-
-                <td className="text-center px-2 py-1.5 border-l border-gray-200 bg-gray-50">
-                  {pct !== null ? (
-                    <span className={`font-bold ${pct >= 80 ? 'text-green-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                      {pct}%
-                    </span>
-                  ) : (
-                    <span className="text-gray-300">—</span>
-                  )}
+                <td className="text-center px-2 py-2 border-l border-gray-200 bg-gray-50">
+                  {pct !== null
+                    ? <span className={`font-bold ${pct >= 80 ? 'text-green-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600'}`}>{pct}%</span>
+                    : <span className="text-gray-300">—</span>}
                 </td>
               </tr>
             )
           })}
         </tbody>
 
+        {/* ── LEGEND ── */}
         <tfoot>
-          <tr className="bg-gray-100 border-t border-gray-300">
-            <td colSpan={2} className="sticky left-0 bg-gray-100 px-3 py-2 text-gray-500 font-medium">
-              Leyenda:
+          <tr className="bg-gray-100 border-t-2 border-gray-300">
+            <td colSpan={2} className="sticky left-0 bg-gray-100 px-3 py-3 font-semibold text-gray-600 text-xs align-top">
+              Leyenda
             </td>
             {days.map(d => <td key={d} className="border-r border-gray-200" />)}
-            <td className="px-2 py-2 text-xs text-gray-500">
-              <div className="flex flex-col gap-1">
-                <span><span className="inline-block w-4 h-4 rounded bg-green-500 mr-1 align-middle" />C: Cumple</span>
-                <span><span className="inline-block w-4 h-4 rounded bg-red-500 mr-1 align-middle" />NC: No Cumple</span>
-                <span><span className="inline-block w-4 h-4 rounded bg-gray-300 mr-1 align-middle" />NA: No Aplica</span>
-                <span><span className="inline-block w-4 h-4 rounded bg-blue-100 mr-1 align-middle" />M/T: Mañana/Tarde °C</span>
+            <td className="px-3 py-3">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-600">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-600 text-white text-[10px] font-bold shrink-0">M</span>
+                  <span>Mañana</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-orange-500 text-white text-[10px] font-bold shrink-0">T</span>
+                  <span>Tarde</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-5 h-4 rounded bg-blue-100 border border-blue-200 shrink-0" />
+                  <span>Temp. registrada</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-5 h-4 rounded bg-red-50 border border-red-100 shrink-0" />
+                  <span>Sin registro</span>
+                </div>
+                <div className="col-span-2 border-t border-gray-200 pt-1 mt-0.5 font-semibold text-gray-700">Cumplimiento (C/NC/NA)</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-5 h-4 rounded bg-green-500 shrink-0" />
+                  <span>Cumple</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-5 h-4 rounded bg-red-500 shrink-0" />
+                  <span>No Cumple</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-5 h-4 rounded bg-gray-300 shrink-0" />
+                  <span>No Aplica</span>
+                </div>
               </div>
             </td>
           </tr>
