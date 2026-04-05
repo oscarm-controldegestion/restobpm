@@ -264,16 +264,16 @@ export default function Subscription() {
 
           <div className="p-5 space-y-4">
             {/* Advertencia clave */}
-            <div className="bg-red-50 border-l-4 border-red-400 rounded-r-lg p-4">
+            <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-4">
               <div className="flex items-start gap-2">
-                <AlertTriangle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
+                <ShieldCheck size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-sm text-red-800 mb-1">Limitación de Responsabilidad — Cláusula Principal</p>
-                  <p className="text-xs text-red-700 leading-relaxed">
-                    RestoBPM es una <strong>herramienta de gestión y registro digital</strong>. <strong>No garantiza</strong> el cumplimiento
-                    normativo ni es responsable por multas, sanciones, clausuras o amonestaciones aplicadas por la{' '}
-                    <strong>SEREMI de Salud</strong> u otros organismos fiscalizadores, independiente del uso de la Plataforma.
-                    La responsabilidad por el estado sanitario del establecimiento recae <strong>exclusivamente en el Cliente</strong>.
+                  <p className="font-semibold text-sm text-blue-800 mb-1">RestoBPM — Aplicación de Apoyo al Cumplimiento del Reglamento Sanitario de los Alimentos (D.S. N° 977/96)</p>
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    RestoBPM es una <strong>aplicación de apoyo al cumplimiento del Reglamento Sanitario de los Alimentos</strong>.
+                    Permite registrar y gestionar las actividades BPM del establecimiento, pero la responsabilidad por
+                    el estado sanitario, el cumplimiento normativo y cualquier consecuencia ante la{' '}
+                    <strong>Autoridad Sanitaria</strong> recae <strong>exclusivamente en el titular del establecimiento</strong>.
                   </p>
                 </div>
               </div>
@@ -343,8 +343,9 @@ export default function Subscription() {
                 <Link to="/contrato" target="_blank" className="text-brand-700 hover:underline font-semibold">
                   Contrato de Términos de Uso y Limitación de Responsabilidad
                 </Link>{' '}
-                de RestoBPM, incluyendo que <strong>RestoBPM no es responsable por multas o sanciones
-                de la SEREMI de Salud</strong>. Entiendo que al completar el pago, esta aceptación queda
+                de RestoBPM. Entiendo que RestoBPM es una <strong>aplicación de apoyo al cumplimiento
+                del Reglamento Sanitario de los Alimentos</strong> y que la responsabilidad ante la Autoridad
+                Sanitaria recae exclusivamente en el titular del establecimiento. Al completar el pago, esta aceptación queda
                 registrada con validez de firma electrónica simple según la <strong>Ley N° 19.799</strong> y
                 el pago se considerará como confirmación del contrato.
               </span>
