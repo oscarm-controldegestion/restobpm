@@ -19,6 +19,9 @@ import Documentos from '@/pages/supervisor/Documentos'
 import Settings from '@/pages/admin/Settings'
 import Subscription from '@/pages/admin/Subscription'
 import LoadingScreen from '@/components/ui/LoadingScreen'
+import PrivacyPage from '@/pages/legal/PrivacyPage'
+import TermsPage from '@/pages/legal/TermsPage'
+import RegisterPage from '@/pages/auth/RegisterPage'
 
 function ProtectedRoute({ children, allowedRoles }: { children: JSX.Element; allowedRoles?: string[] }) {
   const { user, profile, loading } = useAuth()
@@ -39,7 +42,10 @@ export default function AppRouter() {
         {/* ── Públicas (sin login requerido) ───────────────────────── */}
         <Route path="/"              element={<LandingPage />} />
         <Route path="/login"         element={<LoginPage />} />
+        <Route path="/register"      element={<RegisterPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/privacidad"    element={<PrivacyPage />} />
+        <Route path="/terminos"      element={<TermsPage />} />
 
         {/* ── App (requiere autenticación) ─────────────────────────── */}
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

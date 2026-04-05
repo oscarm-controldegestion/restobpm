@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # npm — dependencias del frontend
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Santiago"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "oscarm-controldegestion"
+    labels:
+      - "dependencies"
+      - "security"
+    # Agrupar actualizaciones menores y de parches para reducir ruido
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"

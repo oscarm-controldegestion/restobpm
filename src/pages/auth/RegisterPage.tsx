@@ -38,6 +38,7 @@ export default function RegisterPage() {
   const [email,      setEmail]      = useState('')
   const [password,   setPassword]   = useState('')
   const [password2,  setPassword2]  = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   if (user) return <Navigate to="/" replace />
   if (success) {
@@ -83,6 +84,10 @@ export default function RegisterPage() {
 
     if (!adminName.trim() || !email.trim() || !password) {
       setError('Nombre, correo y contraseña son obligatorios.')
+      return
+    }
+    if (!acceptedTerms) {
+      setError('Debes aceptar los Términos de Servicio y la Política de Privacidad para continuar.')
       return
     }
     if (password.length < 8) {
@@ -323,6 +328,30 @@ export default function RegisterPage() {
               <div className="bg-brand-700/5 border border-brand-700/20 rounded-xl p-3 text-xs text-brand-700">
                 <strong>Período de prueba gratuito:</strong> Tendrás acceso completo durante 3 días. Sin necesidad de tarjeta de crédito.
               </div>
+
+              {/* Consent checkbox — Ley 19.628 Art.4 */}
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <div className="mt-0.5 flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={e => setAcceptedTerms(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-brand-700 focus:ring-brand-500 cursor-pointer"
+                  />
+                </div>
+                <span className="text-xs text-gray-500 leading-relaxed">
+                  He leído y acepto los{' '}
+                  <Link to="/terminos" target="_blank" className="text-brand-700 hover:underline font-medium">
+                    Términos de Servicio
+                  </Link>{' '}
+                  y la{' '}
+                  <Link to="/privacidad" target="_blank" className="text-brand-700 hover:underline font-medium">
+                    Política de Privacidad
+                  </Link>
+                  {' '}de RestoBPM. Declaro que tengo autorización para registrar datos personales de mis trabajadores
+                  de conformidad con la Ley N° 19.628.
+                </span>
+              </label>
 
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">{error}</div>
