@@ -283,6 +283,16 @@ export const PRICING_PLANS: PricingPlan[] = [
   },
 ]
 
+// ─── AREAS ───────────────────────────────────────────────────────────────────
+export interface Area {
+  id: string
+  tenant_id: string
+  name: string
+  description: string | null
+  active: boolean
+  created_at: string
+}
+
 // ─── PLANILLA TYPES ───────────────────────────────────────────────────────────
 export type PlanillaFrequency = 'daily' | 'weekly' | 'monthly'
 export type PlanillaValue     = 'C' | 'NC' | 'NA'
@@ -319,6 +329,7 @@ export interface PlanillaMonth {
   year: number
   month: number
   assigned_to: string | null
+  area_id: string | null
   status: PlanillaStatus
   signed_at: string | null
   signed_by: string | null
@@ -327,6 +338,7 @@ export interface PlanillaMonth {
   created_at: string
   template?: PlanillaTemplate
   assigned_profile?: Profile
+  area?: Area
 }
 
 export interface PlanillaEntry {

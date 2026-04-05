@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
   PlanillaTemplate, PlanillaItem, PlanillaMonth,
-  PlanillaEntry, PlanillaAlert, PlanillaValue, TimeSlot, Profile
+  PlanillaEntry, PlanillaAlert, PlanillaValue, TimeSlot, Profile, Area
 } from '@/types'
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -304,4 +304,48 @@ export async function updatePlanillaItem(id: string, updates: Partial<PlanillaIt
 
 export async function deletePlanillaItem(id: string) {
   return supabase.from('planilla_items').update({ active: false }).eq('id', id)
+}
+
+// ── Areas ─────────────────────────────────────────────────────────────────────
+export function useAreas() {
+  const { tenant } = useAuth()
+  const [areas, setAreas]     = useState<Area[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    if (!tenant) return
+    const { data } = await supabase
+      .from('areas')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .eq('active', true)
+      .order('name')
+    setAreas((data ?? []) as Area[])
+    setLoading(false)
+  }, [tenant])
+
+  useEffect(() => { load() }, [load])
+
+  const createArea = useCallback(async (name: string, description: string | null) => {
+    if (!tenant) return
+    await supabase.from('areas').insert({ tenant_id: tenant.id, name: name.trim(), description: description?.trim() || null })
+    await load()
+  }, [tenant, load])
+
+  const updateArea = useCallback(async (id: string, name: string, description: string | null) => {
+    await supabase.from('areas').update({ name: name.trim(), description: description?.trim() || null }).eq('id', id)
+    await load()
+  }, [load])
+
+  const deleteArea = useCallback(async (id: string) => {
+    await supabase.from('areas').update({ active: false }).eq('id', id)
+    setAreas(prev => prev.filter(a => a.id !== id))
+  }, [])
+
+  return { areas, loading, createArea, updateArea, deleteArea, reload: load }
+}
+
+// ── Assign area to a planilla month ──────────────────────────────────────────
+export async function assignPlanillaArea(monthId: string, areaId: string | null) {
+  return supabase.from('planilla_months').update({ area_id: areaId }).eq('id', monthId)
 }

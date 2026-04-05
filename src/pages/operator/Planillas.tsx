@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { ClipboardList, ChevronRight, ArrowLeft, PenLine, CheckCircle, AlertCircle, Calendar } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -212,13 +213,17 @@ function PlanillaDetail({
 
 // ── Main list ─────────────────────────────────────────────────────────────────
 export default function OperatorPlanillas() {
-  const today = new Date()
-  const [year]  = useState(today.getFullYear())
-  const [month] = useState(today.getMonth() + 1)
+  const today    = new Date()
+  const location = useLocation()
+  const [year]   = useState(today.getFullYear())
+  const [month]  = useState(today.getMonth() + 1)
   const { templates } = usePlanillaTemplates()
   // filterByCurrentUser=true → only shows planillas assigned to this operator
   const { months, loading: loadingMonths, reload } = usePlanillaMonths(year, month, true)
   const [selected, setSelected] = useState<PlanillaMonth | null>(null)
+
+  // Reset to list view whenever the sidebar navigates to this same route
+  useEffect(() => { setSelected(null) }, [location.key])
 
   if (selected) {
     const fresh = months.find(m => m.id === selected.id) ?? selected

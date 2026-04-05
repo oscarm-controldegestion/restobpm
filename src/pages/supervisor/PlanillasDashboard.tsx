@@ -3,7 +3,7 @@ import {
   ClipboardList, Bell, BellOff, ChevronRight, ArrowLeft,
   Calendar, AlertTriangle, CheckCircle, Plus, Pencil,
   Trash2, Thermometer, ClipboardCheck, UserCheck, Settings, X,
-  Save,
+  Save, MapPin,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -15,13 +15,15 @@ import {
   usePlanillaEntries,
   usePlanillaAlerts,
   useTenantOperators,
+  useAreas,
   assignPlanillaMonth,
+  assignPlanillaArea,
   createPlanillaItem,
   updatePlanillaItem,
   deletePlanillaItem,
 } from '@/hooks/usePlanillas'
 import PlanillaGrid from '@/components/planilla/PlanillaGrid'
-import type { PlanillaMonth, PlanillaTemplate, PlanillaItem, PlanillaFrequency, PlanillaValueType } from '@/types'
+import type { PlanillaMonth, PlanillaTemplate, PlanillaItem, PlanillaFrequency, PlanillaValueType, Area } from '@/types'
 
 const MONTH_NAMES = [
   '', 'Enero','Febrero','Marzo','Abril','Mayo','Junio',
@@ -315,32 +317,151 @@ function ItemConfigPanel({ template }: { template: PlanillaTemplate }) {
   )
 }
 
+// ── Area management panel ─────────────────────────────────────────────────────
+function AreaConfigPanel() {
+  const { areas, loading, createArea, updateArea, deleteArea } = useAreas()
+  const [showForm, setShowForm]   = useState(false)
+  const [editItem, setEditItem]   = useState<Area | null>(null)
+  const [name, setName]           = useState('')
+  const [desc, setDesc]           = useState('')
+  const [saving, setSaving]       = useState(false)
+
+  const openNew = () => { setEditItem(null); setName(''); setDesc(''); setShowForm(true) }
+  const openEdit = (a: Area) => { setEditItem(a); setName(a.name); setDesc(a.description ?? ''); setShowForm(true) }
+
+  const handleSave = async () => {
+    if (!name.trim()) return
+    setSaving(true)
+    if (editItem) {
+      await updateArea(editItem.id, name, desc || null)
+    } else {
+      await createArea(name, desc || null)
+    }
+    setSaving(false)
+    setShowForm(false)
+  }
+
+  if (loading) return <div className="py-6 text-center text-gray-400 text-sm">Cargando áreas…</div>
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-gray-700">Áreas del establecimiento</p>
+        <button
+          onClick={openNew}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-700 text-white rounded-lg text-xs font-semibold hover:bg-brand-900 transition-colors"
+        >
+          <Plus size={13} /> Nueva área
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-brand-50 border border-brand-200 rounded-xl p-4 space-y-3">
+          <p className="text-xs font-semibold text-brand-800">{editItem ? 'Editar área' : 'Nueva área'}</p>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Nombre del área (ej: Cocina, Almacén, Cámara fría)"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+          />
+          <input
+            type="text"
+            value={desc}
+            onChange={e => setDesc(e.target.value)}
+            placeholder="Descripción (opcional)"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+          />
+          <div className="flex gap-2">
+            <button onClick={() => setShowForm(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-xs text-gray-600 hover:bg-gray-50">Cancelar</button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !name.trim()}
+              className="flex-1 py-2 bg-brand-700 text-white rounded-lg text-xs font-semibold hover:bg-brand-900 disabled:opacity-60 flex items-center justify-center gap-1"
+            >
+              <Save size={12} /> {saving ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {areas.length === 0 && !showForm ? (
+        <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400 text-sm">
+          No hay áreas creadas. Agrega la primera.
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          {areas.map((area, idx) => (
+            <div key={area.id} className={`flex items-center gap-3 px-4 py-3 ${idx < areas.length - 1 ? 'border-b border-gray-50' : ''}`}>
+              <div className="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center shrink-0">
+                <MapPin size={13} className="text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800">{area.name}</p>
+                {area.description && <p className="text-xs text-gray-400 truncate">{area.description}</p>}
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button onClick={() => openEdit(area)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
+                  <Pencil size={13} />
+                </button>
+                <button onClick={() => deleteArea(area.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Template card with assignment ─────────────────────────────────────────────
 function TemplateCard({
-  template, months, onView, onAlert,
+  template, months, areas, onView, onAlert, onReload,
 }: {
   template: PlanillaTemplate
   months: PlanillaMonth[]
+  areas: Area[]
   onView: (m: PlanillaMonth) => void
   onAlert: (m: PlanillaMonth) => void
+  onReload: () => void
 }) {
   const { operators } = useTenantOperators()
   const month = months.find(m => m.template_id === template.id)
-  const [assigning, setAssigning] = useState(false)
+
+  // Local assignment state — only saved when user clicks "Guardar"
+  const [selOperator, setSelOperator] = useState(month?.assigned_to ?? '')
+  const [selArea,     setSelArea]     = useState(month?.area_id ?? '')
+  const [saving,      setSaving]      = useState(false)
+  const [saved,       setSaved]       = useState(false)
+
+  // Sync when month changes (e.g. after parent reload)
+  useEffect(() => {
+    setSelOperator(month?.assigned_to ?? '')
+    setSelArea(month?.area_id ?? '')
+  }, [month?.assigned_to, month?.area_id])
+
   if (!month) return null
-  const cfg = STATUS_CONFIG[month.status]
+  const cfg     = STATUS_CONFIG[month.status]
+  const isSigned = month.status === 'signed'
+  const isDirty  = selOperator !== (month.assigned_to ?? '') || selArea !== (month.area_id ?? '')
 
-  const handleAssign = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value
-    setAssigning(true)
-    await assignPlanillaMonth(month.id, val || null)
-    setAssigning(false)
+  const handleSave = async () => {
+    setSaving(true)
+    await Promise.all([
+      assignPlanillaMonth(month.id, selOperator || null),
+      assignPlanillaArea(month.id,  selArea     || null),
+    ])
+    setSaving(false)
+    setSaved(true)
+    onReload()
+    setTimeout(() => setSaved(false), 2500)
   }
-
-  const assignedOp = operators.find(o => o.id === month.assigned_to)
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-gray-50">
         <div className="w-9 h-9 bg-brand-50 rounded-xl flex items-center justify-center shrink-0">
           <ClipboardList size={18} className="text-brand-700" />
@@ -354,21 +475,52 @@ function TemplateCard({
         </span>
       </div>
 
-      {/* Assignment row */}
-      <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
-        <UserCheck size={13} className="text-gray-400 shrink-0" />
-        <span className="text-xs text-gray-500 shrink-0">Asignado a:</span>
-        <select
-          value={month.assigned_to ?? ''}
-          onChange={handleAssign}
-          disabled={assigning || month.status === 'signed'}
-          className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-brand-300 disabled:opacity-60"
-        >
-          <option value="">— Sin asignar —</option>
-          {operators.map(op => (
-            <option key={op.id} value={op.id}>{op.full_name}</option>
-          ))}
-        </select>
+      {/* Assignment form */}
+      <div className="px-4 py-3 space-y-2 bg-gray-50 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <MapPin size={13} className="text-green-600 shrink-0" />
+          <span className="text-xs text-gray-500 w-20 shrink-0">Área:</span>
+          <select
+            value={selArea}
+            onChange={e => setSelArea(e.target.value)}
+            disabled={isSigned}
+            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-green-300 disabled:opacity-60"
+          >
+            <option value="">— Sin área —</option>
+            {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <UserCheck size={13} className="text-gray-400 shrink-0" />
+          <span className="text-xs text-gray-500 w-20 shrink-0">Operador:</span>
+          <select
+            value={selOperator}
+            onChange={e => setSelOperator(e.target.value)}
+            disabled={isSigned}
+            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-300 disabled:opacity-60"
+          >
+            <option value="">— Sin asignar —</option>
+            {operators.map(op => <option key={op.id} value={op.id}>{op.full_name}</option>)}
+          </select>
+        </div>
+        {!isSigned && (
+          <div className="flex justify-end pt-1">
+            {saved ? (
+              <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                <CheckCircle size={13} /> Guardado
+              </span>
+            ) : (
+              <button
+                onClick={handleSave}
+                disabled={saving || !isDirty}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-700 text-white rounded-lg text-xs font-semibold hover:bg-brand-900 disabled:opacity-40 transition-colors"
+              >
+                <Save size={12} />
+                {saving ? 'Guardando…' : 'Guardar asignación'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex divide-x divide-gray-100">
@@ -396,11 +548,12 @@ export default function PlanillasDashboard() {
   const today = new Date()
   const [year]  = useState(today.getFullYear())
   const [month] = useState(today.getMonth() + 1)
-  const [tab, setTab] = useState<'planillas' | 'items'>('planillas')
+  const [tab, setTab] = useState<'planillas' | 'items' | 'areas'>('planillas')
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
 
   const { templates, loading: loadingTpl } = usePlanillaTemplates()
-  const { months, loading: loadingMonths, ensureMonths } = usePlanillaMonths(year, month)
+  const { months, loading: loadingMonths, ensureMonths, reload: reloadMonths } = usePlanillaMonths(year, month)
+  const { areas } = useAreas()
   const { alerts, markSeen, createAlert } = usePlanillaAlerts()
   const [selected, setSelected] = useState<PlanillaMonth | null>(null)
   const [alertSent, setAlertSent] = useState<string | null>(null)
@@ -454,8 +607,12 @@ export default function PlanillasDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-        {([['planillas', 'Planillas', ClipboardList], ['items', 'Configurar Ítems', Settings]] as const).map(([key, label, Icon]) => (
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
+        {([
+          ['planillas', 'Planillas',      ClipboardList],
+          ['items',     'Ítems',          Settings],
+          ['areas',     'Áreas',          MapPin],
+        ] as const).map(([key, label, Icon]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -543,8 +700,10 @@ export default function PlanillasDashboard() {
                     key={tpl.id}
                     template={tpl}
                     months={months}
+                    areas={areas}
                     onView={m => setSelected({ ...m, template: tpl })}
                     onAlert={handleAlert}
+                    onReload={reloadMonths}
                   />
                 ))}
               </div>
@@ -578,6 +737,9 @@ export default function PlanillasDashboard() {
           {activeTemplate && <ItemConfigPanel template={activeTemplate} />}
         </div>
       )}
+
+      {/* ── AREAS TAB ── */}
+      {tab === 'areas' && <AreaConfigPanel />}
     </div>
   )
 }
