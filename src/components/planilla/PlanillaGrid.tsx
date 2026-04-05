@@ -21,22 +21,24 @@ function daysInMonth(year: number, month: number) {
 
 // ── Numeric temperature cell ──────────────────────────────────────────────────
 interface TempCellProps {
-  value: number | null
+  value: number | 'C' | null
   onSave: (v: number | null) => void
+  onMarkClosed?: () => void
   readonly?: boolean
   isPast: boolean
   isFuture: boolean
   isToday: boolean
 }
 
-function TempCell({ value, onSave, readonly, isPast, isFuture, isToday }: TempCellProps) {
+function TempCell({ value, onSave, onMarkClosed, readonly, isPast, isFuture, isToday }: TempCellProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   const startEdit = () => {
     if (readonly || isFuture) return
-    setDraft(value !== null ? String(value) : '')
+    // If currently 'C' (cerrado), open edit to allow changing
+    setDraft(value !== null && value !== 'C' ? String(value) : '')
     setEditing(true)
     setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select() }, 0)
   }
@@ -53,18 +55,50 @@ function TempCell({ value, onSave, readonly, isPast, isFuture, isToday }: TempCe
     if (e.key === 'Escape') setEditing(false)
   }
 
+  const handleMarkClosed = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setEditing(false)
+    onMarkClosed?.()
+  }
+
   if (editing) {
     return (
-      <input
-        ref={inputRef}
-        type="text"
-        inputMode="decimal"
-        value={draft}
-        onChange={e => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={handleKey}
-        className="w-12 h-7 text-center text-xs border-2 border-blue-400 rounded bg-white outline-none font-mono"
-      />
+      <div className="flex flex-col items-center gap-0.5">
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="decimal"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={handleKey}
+          className="w-12 h-7 text-center text-xs border-2 border-blue-400 rounded bg-white outline-none font-mono"
+        />
+        {onMarkClosed && (
+          <button
+            onMouseDown={handleMarkClosed}
+            className="text-[9px] text-gray-500 hover:text-green-700 hover:bg-green-50 px-1 rounded leading-tight whitespace-nowrap border border-gray-200 hover:border-green-300"
+          >
+            Cerrado
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // 'C' = Cerrado → green badge (counts as compliant)
+  if (value === 'C') {
+    return (
+      <div
+        onClick={startEdit}
+        title={!readonly && !isFuture ? 'Cerrado — toca para editar' : 'Cerrado'}
+        className={`w-12 h-7 rounded flex items-center justify-center text-[10px] font-bold leading-none transition-colors
+          bg-green-100 text-green-700 border border-green-300
+          ${!readonly && !isFuture ? 'cursor-pointer hover:ring-2 hover:ring-green-400' : 'cursor-default'}`}
+      >
+        Cerr.
+      </div>
     )
   }
 
@@ -93,15 +127,16 @@ interface Props {
   planillaMonth: PlanillaMonth
   items: PlanillaItem[]
   entryMap: (itemId: string, day: number) => PlanillaValue | null
-  tempMap: (itemId: string, day: number, slot: TimeSlot) => number | null
+  tempMap: (itemId: string, day: number, slot: TimeSlot) => number | 'C' | null
   onSetValue: (itemId: string, day: number, value: PlanillaValue | null) => void
   onSetNumericValue?: (itemId: string, day: number, slot: TimeSlot, value: number | null) => void
+  onMarkTempClosed?: (itemId: string, day: number, slot: TimeSlot) => void
   readonly?: boolean
 }
 
 // ── Grid ──────────────────────────────────────────────────────────────────────
 export default function PlanillaGrid({
-  planillaMonth, items, entryMap, tempMap, onSetValue, onSetNumericValue, readonly
+  planillaMonth, items, entryMap, tempMap, onSetValue, onSetNumericValue, onMarkTempClosed, readonly
 }: Props) {
   const { year, month } = planillaMonth
   const today           = new Date()
@@ -126,6 +161,7 @@ export default function PlanillaGrid({
     return { c, filled, total: days.length }
   }, [days, entryMap])
 
+  // Count 'C' (cerrado) as filled/compliant for temperature
   const slotCompletion = useCallback((itemId: string, slot: TimeSlot) => {
     let filled = 0
     for (const d of days) { if (tempMap(itemId, d, slot) !== null) filled++ }
@@ -196,6 +232,7 @@ export default function PlanillaGrid({
                             <TempCell
                               value={tempMap(item.id, d, 'morning')}
                               onSave={v => onSetNumericValue?.(item.id, d, 'morning', v)}
+                              onMarkClosed={!readonly && !isFuture ? () => onMarkTempClosed?.(item.id, d, 'morning') : undefined}
                               readonly={readonly}
                               isPast={isPast}
                               isFuture={isFuture}
@@ -233,6 +270,7 @@ export default function PlanillaGrid({
                             <TempCell
                               value={tempMap(item.id, d, 'afternoon')}
                               onSave={v => onSetNumericValue?.(item.id, d, 'afternoon', v)}
+                              onMarkClosed={!readonly && !isFuture ? () => onMarkTempClosed?.(item.id, d, 'afternoon') : undefined}
                               readonly={readonly}
                               isPast={isPast}
                               isFuture={isFuture}
@@ -320,6 +358,10 @@ export default function PlanillaGrid({
                 <div className="flex items-center gap-1.5">
                   <span className="inline-block w-5 h-4 rounded bg-red-50 border border-red-100 shrink-0" />
                   <span>Sin registro</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-5 h-4 rounded bg-green-100 border border-green-300 shrink-0" />
+                  <span>Cerrado (cumple)</span>
                 </div>
                 <div className="col-span-2 border-t border-gray-200 pt-1 mt-0.5 font-semibold text-gray-700">Cumplimiento (C/NC/NA)</div>
                 <div className="flex items-center gap-1.5">

@@ -87,7 +87,7 @@ function PlanillaDetail({
 }) {
   const { profile } = useAuth()
   const { items, loading: loadingItems }             = usePlanillaItems(planillaMonth.template_id)
-  const { entryMap, tempMap, setValue, setNumericValue, entries } = usePlanillaEntries(planillaMonth.id)
+  const { entryMap, tempMap, setValue, setNumericValue, setTempClosed, entries } = usePlanillaEntries(planillaMonth.id)
   const [showSign, setShowSign] = useState(false)
   const [signing, setSigning]   = useState(false)
   const [msg, setMsg]           = useState<{ ok: boolean; text: string } | null>(null)
@@ -167,6 +167,7 @@ function PlanillaDetail({
         tempMap={tempMap}
         onSetValue={handleSetValue}
         onSetNumericValue={handleSetNumeric}
+        onMarkTempClosed={(itemId, day, slot) => setTempClosed(itemId, day, slot)}
         readonly={isReadonly}
       />
 
