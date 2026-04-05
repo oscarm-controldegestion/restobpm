@@ -145,6 +145,9 @@ export default function PlanillaGrid({
   const totalDays       = daysInMonth(year, month)
   const days            = Array.from({ length: totalDays }, (_, i) => i + 1)
 
+  const hasTemp       = items.some(i => i.value_type === 'temperature')
+  const hasCompliance = items.some(i => i.value_type !== 'temperature')
+
   const handleTap = useCallback((itemId: string, day: number, current: PlanillaValue | null) => {
     if (readonly) return
     const idx  = VALUE_CYCLE.indexOf(current)
@@ -343,39 +346,47 @@ export default function PlanillaGrid({
             {days.map(d => <td key={d} className="border-r border-gray-200" />)}
             <td className="px-3 py-3">
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-600">
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-600 text-white text-[10px] font-bold shrink-0">M</span>
-                  <span>Mañana</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-orange-500 text-white text-[10px] font-bold shrink-0">T</span>
-                  <span>Tarde</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-5 h-4 rounded bg-blue-100 border border-blue-200 shrink-0" />
-                  <span>Temp. registrada</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-5 h-4 rounded bg-red-50 border border-red-100 shrink-0" />
-                  <span>Sin registro</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-5 h-4 rounded bg-green-100 border border-green-300 shrink-0" />
-                  <span>Cerrado (cumple)</span>
-                </div>
-                <div className="col-span-2 border-t border-gray-200 pt-1 mt-0.5 font-semibold text-gray-700">Cumplimiento (C/NC/NA)</div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-5 h-4 rounded bg-green-500 shrink-0" />
-                  <span>Cumple</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-5 h-4 rounded bg-red-500 shrink-0" />
-                  <span>No Cumple</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-5 h-4 rounded bg-gray-300 shrink-0" />
-                  <span>No Aplica</span>
-                </div>
+                {hasTemp && (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-600 text-white text-[10px] font-bold shrink-0">M</span>
+                      <span>Mañana</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-orange-500 text-white text-[10px] font-bold shrink-0">T</span>
+                      <span>Tarde</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-5 h-4 rounded bg-blue-100 border border-blue-200 shrink-0" />
+                      <span>Temp. registrada</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-5 h-4 rounded bg-red-50 border border-red-100 shrink-0" />
+                      <span>Sin registro</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-5 h-4 rounded bg-green-100 border border-green-300 shrink-0" />
+                      <span>Cerrado (cumple)</span>
+                    </div>
+                  </>
+                )}
+                {hasCompliance && (
+                  <>
+                    {hasTemp && <div className="col-span-2 border-t border-gray-200 pt-1 mt-0.5 font-semibold text-gray-700">Cumplimiento (C/NC/NA)</div>}
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-5 h-4 rounded bg-green-500 shrink-0" />
+                      <span>Cumple</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-5 h-4 rounded bg-red-500 shrink-0" />
+                      <span>No Cumple</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-5 h-4 rounded bg-gray-300 shrink-0" />
+                      <span>No Aplica</span>
+                    </div>
+                  </>
+                )}
               </div>
             </td>
           </tr>

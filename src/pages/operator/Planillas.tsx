@@ -109,11 +109,22 @@ function PlanillaDetail({
     }
   }
 
-  const totalCells  = items.filter(i => i.value_type === 'compliance').length
-    * new Date(planillaMonth.year, planillaMonth.month, 0).getDate()
-  const filledCells = entries.filter(e => e.value !== null).length
-  const cCells      = entries.filter(e => e.value === 'C').length
+  const daysInMonth  = new Date(planillaMonth.year, planillaMonth.month, 0).getDate()
+  const compItems    = items.filter(i => i.value_type !== 'temperature')
+  const tempItems    = items.filter(i => i.value_type === 'temperature')
+  const isTemperature = tempItems.length > 0 && compItems.length === 0
+
+  // Compliance indicators
+  const totalCells  = compItems.length * daysInMonth
+  const filledCells = entries.filter(e => e.value !== null && e.time_slot === null).length
+  const cCells      = entries.filter(e => e.value === 'C' && e.time_slot === null).length
   const compliance  = filledCells > 0 ? Math.round((cCells / filledCells) * 100) : 0
+
+  // Temperature indicators (each item × 2 slots × days)
+  const totalTempCells  = tempItems.length * 2 * daysInMonth
+  const filledTempCells = entries.filter(e => e.time_slot !== null && (e.numeric_value !== null || e.value === 'C')).length
+  const tempCompliance  = totalTempCells > 0 ? Math.round((filledTempCells / totalTempCells) * 100) : 0
+  const emptyTempCells  = totalTempCells - filledTempCells
 
   const handleSign = async (signature: string) => {
     if (!profile) return
@@ -145,13 +156,17 @@ function PlanillaDetail({
         </span>
       </div>
 
-      {totalCells > 0 && (
+      {(totalCells > 0 || totalTempCells > 0) && (
         <div className="grid grid-cols-3 gap-3">
-          {[
+          {(isTemperature ? [
+            { label: 'Completadas', value: `${filledTempCells}/${totalTempCells}`, color: 'text-blue-600' },
+            { label: 'Cumplimiento', value: `${tempCompliance}%`, color: tempCompliance >= 80 ? 'text-green-600' : tempCompliance >= 50 ? 'text-amber-600' : 'text-red-600' },
+            { label: 'Sin Registro', value: emptyTempCells, color: 'text-red-600' },
+          ] : [
             { label: 'Completadas', value: `${filledCells}/${totalCells}`, color: 'text-blue-600' },
             { label: 'Cumplimiento', value: `${compliance}%`, color: compliance >= 80 ? 'text-green-600' : compliance >= 50 ? 'text-amber-600' : 'text-red-600' },
             { label: 'No Cumple', value: entries.filter(e => e.value === 'NC').length, color: 'text-red-600' },
-          ].map(s => (
+          ]).map(s => (
             <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-3 text-center shadow-sm">
               <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
               <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
@@ -172,8 +187,10 @@ function PlanillaDetail({
       />
 
       <p className="text-xs text-gray-400 text-center">
-        Toca cada celda para ciclar: <strong>C</strong> (Cumple) → <strong>NC</strong> (No Cumple) → <strong>NA</strong> (No Aplica) → vacío
-        {' '} | Para temperatura: toca la celda M o T e ingresa los grados °C
+        {isTemperature
+          ? 'Toca la celda M (mañana) o T (tarde) e ingresa los grados °C. Usa "Cerrado" si el establecimiento no abre ese día.'
+          : <>Toca cada celda para ciclar: <strong>C</strong> (Cumple) → <strong>NC</strong> (No Cumple) → <strong>NA</strong> (No Aplica) → vacío</>
+        }
       </p>
 
       {msg && (
