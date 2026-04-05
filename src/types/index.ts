@@ -330,6 +330,7 @@ export interface PlanillaMonth {
   month: number
   assigned_to: string | null
   area_id: string | null
+  label: string | null
   status: PlanillaStatus
   signed_at: string | null
   signed_by: string | null
@@ -339,6 +340,12 @@ export interface PlanillaMonth {
   template?: PlanillaTemplate
   assigned_profile?: Profile
   area?: Area
+}
+
+export interface PlanillaMonthItem {
+  id: string
+  month_id: string
+  item_id: string
 }
 
 export interface PlanillaEntry {

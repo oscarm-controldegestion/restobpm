@@ -13,6 +13,7 @@ import {
   usePlanillaMonths,
   usePlanillaItems,
   usePlanillaItemsAll,
+  usePlanillaItemsForMonth,
   usePlanillaEntries,
   usePlanillaAlerts,
   useTenantOperators,
@@ -22,6 +23,7 @@ import {
   createPlanillaItem,
   updatePlanillaItem,
   deletePlanillaItem,
+  usePlanillaMonthItems,
 } from '@/hooks/usePlanillas'
 import PlanillaGrid from '@/components/planilla/PlanillaGrid'
 import type { PlanillaMonth, PlanillaTemplate, PlanillaItem, PlanillaFrequency, PlanillaValueType, Area } from '@/types'
@@ -46,7 +48,7 @@ const ALERT_TYPE_CONFIG = {
 
 // ── Read-only detail view ─────────────────────────────────────────────────────
 function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMonth; onBack: () => void }) {
-  const { items, loading: loadingItems } = usePlanillaItems(planillaMonth.template_id)
+  const { items, loading: loadingItems } = usePlanillaItemsForMonth(planillaMonth.id, planillaMonth.template_id)
   const { entryMap, tempMap, complianceMTMap, entries }   = usePlanillaEntries(planillaMonth.id)
 
   const totalCells  = items.filter(i => i.value_type === 'compliance').length
@@ -421,48 +423,225 @@ function AreaConfigPanel() {
   )
 }
 
-// ── Template card with assignment ─────────────────────────────────────────────
+// ── Create / Edit planilla modal ─────────────────────────────────────────────
+function PlanillaFormModal({
+  template,
+  editMonth,
+  areas,
+  operators,
+  allItems,
+  existingItemIds,
+  onSave,
+  onClose,
+}: {
+  template: PlanillaTemplate
+  editMonth: PlanillaMonth | null // null = creating new
+  areas: Area[]
+  operators: { id: string; full_name: string }[]
+  allItems: PlanillaItem[]
+  existingItemIds: string[] // item_ids already assigned (for edit mode)
+  onSave: (label: string, areaId: string | null, operatorId: string | null, itemIds: string[]) => Promise<void>
+  onClose: () => void
+}) {
+  const [label, setLabel]       = useState(editMonth?.label ?? '')
+  const [areaId, setAreaId]     = useState(editMonth?.area_id ?? '')
+  const [operatorId, setOperatorId] = useState(editMonth?.assigned_to ?? '')
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(
+    new Set(existingItemIds.length > 0 ? existingItemIds : allItems.map(i => i.id))
+  )
+  const [saving, setSaving] = useState(false)
+
+  const toggleItem = (id: string) => {
+    setSelectedItems(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    if (selectedItems.size === allItems.length) setSelectedItems(new Set())
+    else setSelectedItems(new Set(allItems.map(i => i.id)))
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    await onSave(
+      label.trim() || '',
+      areaId || null,
+      operatorId || null,
+      Array.from(selectedItems)
+    )
+    setSaving(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
+          <div>
+            <h3 className="font-bold text-gray-800">{editMonth ? 'Editar planilla' : 'Nueva planilla'}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{template.name}</p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-500"><X size={18} /></button>
+        </div>
+
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
+          {/* Label */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Etiqueta / Nombre</label>
+            <input
+              type="text"
+              value={label}
+              onChange={e => setLabel(e.target.value)}
+              placeholder="Ej: Cocina, Sushi, Línea 1…"
+              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            />
+          </div>
+
+          {/* Area */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Área</label>
+            <select
+              value={areaId}
+              onChange={e => setAreaId(e.target.value)}
+              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+            >
+              <option value="">— Sin área —</option>
+              {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+
+          {/* Operator */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Operador asignado</label>
+            <select
+              value={operatorId}
+              onChange={e => setOperatorId(e.target.value)}
+              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300"
+            >
+              <option value="">— Sin asignar —</option>
+              {operators.map(op => <option key={op.id} value={op.id}>{op.full_name}</option>)}
+            </select>
+          </div>
+
+          {/* Item selection */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-gray-600">Ítems incluidos</label>
+              <button onClick={toggleAll} className="text-xs text-brand-700 hover:underline">
+                {selectedItems.size === allItems.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+              </button>
+            </div>
+            <div className="border border-gray-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+              {allItems.map((item, idx) => (
+                <label
+                  key={item.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50 ${idx < allItems.length - 1 ? 'border-b border-gray-100' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.has(item.id)}
+                    onChange={() => toggleItem(item.id)}
+                    className="w-4 h-4 rounded border-gray-300 text-brand-700 focus:ring-brand-300"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-800 truncate">{item.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {item.value_type === 'temperature' ? 'Temperatura' : item.value_type === 'compliance_mt' ? 'C/NC (M/T)' : 'C/NC/NA'}
+                      {item.equipment_number ? ` · Equipo ${item.equipment_number}` : ''}
+                    </p>
+                  </div>
+                </label>
+              ))}
+              {allItems.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-4">No hay ítems creados para esta planilla</p>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">{selectedItems.size} de {allItems.length} ítems seleccionados</p>
+          </div>
+        </div>
+
+        <div className="p-4 flex gap-3 border-t border-gray-100 shrink-0">
+          <button onClick={onClose} className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
+          <button
+            onClick={handleSave}
+            disabled={saving || selectedItems.size === 0}
+            className="flex-1 py-2.5 bg-brand-700 text-white rounded-xl text-sm font-semibold hover:bg-brand-900 disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            <Save size={15} />
+            {saving ? 'Guardando…' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Planilla instance row (one per area/worker) ──────────────────────────────
+function PlanillaInstanceRow({
+  pm, areas, operators, onView, onAlert, onEdit, onReload,
+}: {
+  pm: PlanillaMonth
+  areas: Area[]
+  operators: { id: string; full_name: string }[]
+  onView: (m: PlanillaMonth) => void
+  onAlert: (m: PlanillaMonth) => void
+  onEdit: (m: PlanillaMonth) => void
+  onReload: () => void
+}) {
+  const cfg = STATUS_CONFIG[pm.status]
+  const area = areas.find(a => a.id === pm.area_id)
+  const operator = operators.find(o => o.id === pm.assigned_to)
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 transition-colors">
+      <div className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 truncate">
+          {pm.label || area?.name || 'Sin etiqueta'}
+        </p>
+        <p className="text-xs text-gray-400 truncate">
+          {operator ? operator.full_name : 'Sin asignar'}
+          {area && pm.label ? ` · ${area.name}` : ''}
+        </p>
+      </div>
+      <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.color}`}>
+        {cfg.label}
+      </span>
+      <div className="flex gap-1 shrink-0">
+        <button onClick={() => onEdit(pm)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors" title="Editar">
+          <Pencil size={13} />
+        </button>
+        <button onClick={() => onView(pm)} className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600 hover:text-brand-700 transition-colors" title="Ver planilla">
+          <ChevronRight size={14} />
+        </button>
+        {pm.status === 'pending' && (
+          <button onClick={() => onAlert(pm)} className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors" title="Alertar">
+            <Bell size={13} />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Template card with multiple instances ────────────────────────────────────
 function TemplateCard({
-  template, months, areas, onView, onAlert, onReload,
+  template, months, areas, operators, onView, onAlert, onReload, onCreateNew, onEditMonth,
 }: {
   template: PlanillaTemplate
   months: PlanillaMonth[]
   areas: Area[]
+  operators: { id: string; full_name: string }[]
   onView: (m: PlanillaMonth) => void
   onAlert: (m: PlanillaMonth) => void
   onReload: () => void
+  onCreateNew: (template: PlanillaTemplate) => void
+  onEditMonth: (m: PlanillaMonth) => void
 }) {
-  const { operators } = useTenantOperators()
-  const month = months.find(m => m.template_id === template.id)
-
-  // Local assignment state — only saved when user clicks "Guardar"
-  const [selOperator, setSelOperator] = useState(month?.assigned_to ?? '')
-  const [selArea,     setSelArea]     = useState(month?.area_id ?? '')
-  const [saving,      setSaving]      = useState(false)
-  const [saved,       setSaved]       = useState(false)
-
-  // Sync when month changes (e.g. after parent reload)
-  useEffect(() => {
-    setSelOperator(month?.assigned_to ?? '')
-    setSelArea(month?.area_id ?? '')
-  }, [month?.assigned_to, month?.area_id])
-
-  if (!month) return null
-  const cfg     = STATUS_CONFIG[month.status]
-  const isSigned = month.status === 'signed'
-  const isDirty  = selOperator !== (month.assigned_to ?? '') || selArea !== (month.area_id ?? '')
-
-  const handleSave = async () => {
-    setSaving(true)
-    await Promise.all([
-      assignPlanillaMonth(month.id, selOperator || null),
-      assignPlanillaArea(month.id,  selArea     || null),
-    ])
-    setSaving(false)
-    setSaved(true)
-    onReload()
-    setTimeout(() => setSaved(false), 2500)
-  }
+  const templateMonths = months.filter(m => m.template_id === template.id)
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -475,74 +654,41 @@ function TemplateCard({
           <p className="font-semibold text-gray-800 truncate">{template.name}</p>
           <p className="text-xs text-gray-400 truncate">{template.description}</p>
         </div>
-        <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>
-          {cfg.label}
+        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+          {templateMonths.length} planilla{templateMonths.length !== 1 ? 's' : ''}
         </span>
       </div>
 
-      {/* Assignment form */}
-      <div className="px-4 py-3 space-y-2 bg-gray-50 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <MapPin size={13} className="text-green-600 shrink-0" />
-          <span className="text-xs text-gray-500 w-20 shrink-0">Área:</span>
-          <select
-            value={selArea}
-            onChange={e => setSelArea(e.target.value)}
-            disabled={isSigned}
-            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-green-300 disabled:opacity-60"
-          >
-            <option value="">— Sin área —</option>
-            {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
+      {/* Instance list */}
+      {templateMonths.length > 0 ? (
+        <div>
+          {templateMonths.map(pm => (
+            <PlanillaInstanceRow
+              key={pm.id}
+              pm={pm}
+              areas={areas}
+              operators={operators}
+              onView={onView}
+              onAlert={onAlert}
+              onEdit={onEditMonth}
+              onReload={onReload}
+            />
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <UserCheck size={13} className="text-gray-400 shrink-0" />
-          <span className="text-xs text-gray-500 w-20 shrink-0">Operador:</span>
-          <select
-            value={selOperator}
-            onChange={e => setSelOperator(e.target.value)}
-            disabled={isSigned}
-            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-300 disabled:opacity-60"
-          >
-            <option value="">— Sin asignar —</option>
-            {operators.map(op => <option key={op.id} value={op.id}>{op.full_name}</option>)}
-          </select>
+      ) : (
+        <div className="px-4 py-6 text-center text-gray-400 text-sm">
+          No hay planillas creadas para este mes
         </div>
-        {!isSigned && (
-          <div className="flex justify-end pt-1">
-            {saved ? (
-              <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                <CheckCircle size={13} /> Guardado
-              </span>
-            ) : (
-              <button
-                onClick={handleSave}
-                disabled={saving || !isDirty}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-700 text-white rounded-lg text-xs font-semibold hover:bg-brand-900 disabled:opacity-40 transition-colors"
-              >
-                <Save size={12} />
-                {saving ? 'Guardando…' : 'Guardar asignación'}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      )}
 
-      <div className="flex divide-x divide-gray-100">
+      {/* Add new button */}
+      <div className="border-t border-gray-100">
         <button
-          onClick={() => onView(month)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-brand-700 hover:bg-brand-50 transition-colors font-medium"
+          onClick={() => onCreateNew(template)}
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-brand-700 hover:bg-brand-50 transition-colors font-medium"
         >
-          <ChevronRight size={14} /> Ver planilla
+          <Plus size={14} /> Agregar planilla
         </button>
-        {month.status === 'pending' && (
-          <button
-            onClick={() => onAlert(month)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-amber-700 hover:bg-amber-50 transition-colors font-medium"
-          >
-            <Bell size={14} /> Alertar
-          </button>
-        )}
       </div>
     </div>
   )
@@ -557,21 +703,24 @@ export default function PlanillasDashboard() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
 
   const { templates, loading: loadingTpl } = usePlanillaTemplates()
-  const { months, loading: loadingMonths, ensureMonths, reload: reloadMonths } = usePlanillaMonths(year, month)
+  const { months, loading: loadingMonths, ensureMonths, reload: reloadMonths, createMonth, deleteMonth } = usePlanillaMonths(year, month)
+  const { operators } = useTenantOperators()
   const { areas } = useAreas()
   const { alerts, markSeen, createAlert } = usePlanillaAlerts()
   const [selected, setSelected] = useState<PlanillaMonth | null>(null)
   const [alertSent, setAlertSent] = useState<string | null>(null)
   const location = useLocation()
 
+  // Modal state for creating/editing planillas
+  const [formTemplate, setFormTemplate] = useState<PlanillaTemplate | null>(null)
+  const [formEditMonth, setFormEditMonth] = useState<PlanillaMonth | null>(null)
+  const [formItems, setFormItems] = useState<PlanillaItem[]>([])
+  const [formExistingItemIds, setFormExistingItemIds] = useState<string[]>([])
+
   // Reset to list view when sidebar navigates to this same route
   useEffect(() => { setSelected(null) }, [location.key])
 
-  useEffect(() => {
-    if (!loadingTpl && templates.length > 0 && !loadingMonths && months.length === 0) {
-      ensureMonths(templates)
-    }
-  }, [loadingTpl, loadingMonths, templates.length])
+  // No longer auto-create months — users create them manually now
 
   const [stats, setStats] = useState({ signed: 0, completed: 0, inProgress: 0, pending: 0 })
   useEffect(() => {
@@ -589,6 +738,74 @@ export default function PlanillasDashboard() {
     await createAlert(m.id, 'not_started')
     setAlertSent(m.id)
     setTimeout(() => setAlertSent(null), 3000)
+  }
+
+  // Open create modal
+  const handleCreateNew = async (template: PlanillaTemplate) => {
+    // Load items for the template
+    const { data } = await supabase
+      .from('planilla_items')
+      .select('*')
+      .eq('template_id', template.id)
+      .eq('active', true)
+      .order('order_index')
+    setFormItems((data ?? []) as PlanillaItem[])
+    setFormExistingItemIds([])
+    setFormTemplate(template)
+    setFormEditMonth(null)
+  }
+
+  // Open edit modal
+  const handleEditMonth = async (pm: PlanillaMonth) => {
+    const tpl = templates.find(t => t.id === pm.template_id)
+    if (!tpl) return
+    // Load items for the template
+    const { data: items } = await supabase
+      .from('planilla_items')
+      .select('*')
+      .eq('template_id', tpl.id)
+      .eq('active', true)
+      .order('order_index')
+    // Load existing assigned items
+    const { data: monthItems } = await supabase
+      .from('planilla_month_items')
+      .select('item_id')
+      .eq('month_id', pm.id)
+    setFormItems((items ?? []) as PlanillaItem[])
+    setFormExistingItemIds((monthItems ?? []).map((mi: any) => mi.item_id))
+    setFormTemplate(tpl)
+    setFormEditMonth(pm)
+  }
+
+  // Save create/edit
+  const handleFormSave = async (label: string, areaId: string | null, operatorId: string | null, itemIds: string[]) => {
+    if (formEditMonth) {
+      // Update existing
+      await Promise.all([
+        supabase.from('planilla_months').update({
+          label: label || null,
+          area_id: areaId,
+          assigned_to: operatorId,
+        }).eq('id', formEditMonth.id),
+        // Sync items
+        (async () => {
+          await supabase.from('planilla_month_items').delete().eq('month_id', formEditMonth.id)
+          if (itemIds.length > 0 && itemIds.length < formItems.length) {
+            // Only insert if not all items selected (all = default behavior)
+            await supabase.from('planilla_month_items').insert(
+              itemIds.map(itemId => ({ month_id: formEditMonth.id, item_id: itemId }))
+            )
+          }
+        })(),
+      ])
+    } else if (formTemplate) {
+      // Create new
+      const saveItemIds = itemIds.length < formItems.length ? itemIds : []
+      await createMonth(formTemplate.id, label || null, areaId, operatorId, saveItemIds)
+    }
+    setFormTemplate(null)
+    setFormEditMonth(null)
+    reloadMonths()
   }
 
   // If viewing a specific planilla detail
@@ -710,9 +927,12 @@ export default function PlanillasDashboard() {
                     template={tpl}
                     months={months}
                     areas={areas}
+                    operators={operators}
                     onView={m => setSelected({ ...m, template: tpl })}
                     onAlert={handleAlert}
                     onReload={reloadMonths}
+                    onCreateNew={handleCreateNew}
+                    onEditMonth={handleEditMonth}
                   />
                 ))}
               </div>
@@ -749,6 +969,20 @@ export default function PlanillasDashboard() {
 
       {/* ── AREAS TAB ── */}
       {tab === 'areas' && <AreaConfigPanel />}
+
+      {/* ── CREATE/EDIT PLANILLA MODAL ── */}
+      {formTemplate && (
+        <PlanillaFormModal
+          template={formTemplate}
+          editMonth={formEditMonth}
+          areas={areas}
+          operators={operators}
+          allItems={formItems}
+          existingItemIds={formExistingItemIds}
+          onSave={handleFormSave}
+          onClose={() => { setFormTemplate(null); setFormEditMonth(null) }}
+        />
+      )}
     </div>
   )
 }

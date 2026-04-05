@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
-  PlanillaTemplate, PlanillaItem, PlanillaMonth,
+  PlanillaTemplate, PlanillaItem, PlanillaMonth, PlanillaMonthItem,
   PlanillaEntry, PlanillaAlert, PlanillaValue, TimeSlot, Profile, Area
 } from '@/types'
 
@@ -69,6 +69,47 @@ export function usePlanillaItemsAll(templateId: string | null) {
   return { items, loading, reload: load }
 }
 
+// ── Items for a specific planilla month (filtered by month_items if assigned) ─
+export function usePlanillaItemsForMonth(monthId: string | null, templateId: string | null) {
+  const [items, setItems]     = useState<PlanillaItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    if (!templateId || !monthId) { setLoading(false); return }
+
+    // First check if this month has specific item assignments
+    const { data: monthItems } = await supabase
+      .from('planilla_month_items')
+      .select('item_id')
+      .eq('month_id', monthId)
+
+    const assignedIds = (monthItems ?? []).map((mi: any) => mi.item_id)
+
+    // Load all active items for this template
+    const { data: allItems } = await supabase
+      .from('planilla_items')
+      .select('*')
+      .eq('template_id', templateId)
+      .eq('active', true)
+      .order('order_index')
+
+    const all = (allItems ?? []) as PlanillaItem[]
+
+    // If specific items are assigned, filter; otherwise show all
+    if (assignedIds.length > 0) {
+      const idSet = new Set(assignedIds)
+      setItems(all.filter(i => idSet.has(i.id)))
+    } else {
+      setItems(all)
+    }
+    setLoading(false)
+  }, [monthId, templateId])
+
+  useEffect(() => { load() }, [load])
+
+  return { items, loading, reload: load }
+}
+
 // ── Operators for current tenant ──────────────────────────────────────────────
 export function useTenantOperators() {
   const { tenant } = useAuth()
@@ -121,23 +162,65 @@ export function usePlanillaMonths(year: number, month: number, filterByCurrentUs
 
   useEffect(() => { load() }, [load])
 
-  // Ensure all active templates have a month record for this period
+  // Create a new planilla month instance (for multi-area support)
+  const createMonth = useCallback(async (
+    templateId: string,
+    label: string | null,
+    areaId: string | null,
+    assignedTo: string | null,
+    itemIds: string[]
+  ) => {
+    if (!tenant) return null
+    const { data: newMonth, error } = await supabase.from('planilla_months').insert({
+      tenant_id:   tenant.id,
+      template_id: templateId,
+      year,
+      month,
+      label,
+      area_id:     areaId || null,
+      assigned_to: assignedTo || null,
+      status:      'pending',
+    }).select().single()
+
+    if (error || !newMonth) return null
+
+    // Insert item assignments
+    if (itemIds.length > 0) {
+      await supabase.from('planilla_month_items').insert(
+        itemIds.map(itemId => ({ month_id: newMonth.id, item_id: itemId }))
+      )
+    }
+
+    await load()
+    return newMonth
+  }, [tenant, year, month, load])
+
+  // Delete a planilla month
+  const deleteMonth = useCallback(async (monthId: string) => {
+    await supabase.from('planilla_months').delete().eq('id', monthId)
+    await load()
+  }, [load])
+
+  // Legacy: ensure at least one month per template (backward compat)
   const ensureMonths = useCallback(async (templates: PlanillaTemplate[]) => {
     if (!tenant) return
     for (const tpl of templates) {
-      await supabase.from('planilla_months').insert({
-        tenant_id:   tenant.id,
-        template_id: tpl.id,
-        year,
-        month,
-        status: 'pending',
-      }).select().single()
-      // ignore conflict (unique constraint)
+      // Only create if no months exist for this template in this period
+      const existing = months.filter(m => m.template_id === tpl.id)
+      if (existing.length === 0) {
+        await supabase.from('planilla_months').insert({
+          tenant_id:   tenant.id,
+          template_id: tpl.id,
+          year,
+          month,
+          status: 'pending',
+        }).select().single()
+      }
     }
     await load()
-  }, [tenant, year, month, load])
+  }, [tenant, year, month, months, load])
 
-  return { months, loading, reload: load, ensureMonths }
+  return { months, loading, reload: load, ensureMonths, createMonth, deleteMonth }
 }
 
 // ── Entries for a month ───────────────────────────────────────────────────────
@@ -414,4 +497,43 @@ export function useAreas() {
 // ── Assign area to a planilla month ──────────────────────────────────────────
 export async function assignPlanillaArea(monthId: string, areaId: string | null) {
   return supabase.from('planilla_months').update({ area_id: areaId }).eq('id', monthId)
+}
+
+// ── Update label on a planilla month ─────────────────────────────────────────
+export async function updatePlanillaMonthLabel(monthId: string, label: string | null) {
+  return supabase.from('planilla_months').update({ label }).eq('id', monthId)
+}
+
+// ── Month items (junction table) ─────────────────────────────────────────────
+export function usePlanillaMonthItems(monthId: string | null) {
+  const [itemIds, setItemIds] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    if (!monthId) { setLoading(false); return }
+    const { data } = await supabase
+      .from('planilla_month_items')
+      .select('item_id')
+      .eq('month_id', monthId)
+    setItemIds((data ?? []).map((d: any) => d.item_id))
+    setLoading(false)
+  }, [monthId])
+
+  useEffect(() => { load() }, [load])
+
+  // Sync: replace all item assignments for this month
+  const syncItems = useCallback(async (newItemIds: string[]) => {
+    if (!monthId) return
+    // Delete all existing
+    await supabase.from('planilla_month_items').delete().eq('month_id', monthId)
+    // Insert new
+    if (newItemIds.length > 0) {
+      await supabase.from('planilla_month_items').insert(
+        newItemIds.map(itemId => ({ month_id: monthId, item_id: itemId }))
+      )
+    }
+    setItemIds(newItemIds)
+  }, [monthId])
+
+  return { itemIds, loading, reload: load, syncItems }
 }

@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import {
   usePlanillaTemplates,
   usePlanillaMonths,
-  usePlanillaItems,
+  usePlanillaItemsForMonth,
   usePlanillaEntries,
   signPlanillaMonth,
   updateMonthStatus,
@@ -86,7 +86,7 @@ function PlanillaDetail({
   onSigned: () => void
 }) {
   const { profile } = useAuth()
-  const { items, loading: loadingItems }             = usePlanillaItems(planillaMonth.template_id)
+  const { items, loading: loadingItems }             = usePlanillaItemsForMonth(planillaMonth.id, planillaMonth.template_id)
   const { entryMap, tempMap, complianceMTMap, setValue, setNumericValue, setTempClosed, setComplianceMTValue, entries } = usePlanillaEntries(planillaMonth.id)
   const [showSign, setShowSign] = useState(false)
   const [signing, setSigning]   = useState(false)
@@ -167,7 +167,10 @@ function PlanillaDetail({
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1 min-w-0">
-          <h2 className="font-bold text-gray-800 text-lg leading-tight">{planillaMonth.template?.name}</h2>
+          <h2 className="font-bold text-gray-800 text-lg leading-tight">
+            {planillaMonth.template?.name}
+            {planillaMonth.label ? ` — ${planillaMonth.label}` : ''}
+          </h2>
           <p className="text-sm text-gray-500">{MONTH_NAMES[planillaMonth.month]} {planillaMonth.year}</p>
         </div>
         <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_CONFIG[planillaMonth.status].color}`}>
@@ -316,7 +319,10 @@ export default function OperatorPlanillas() {
                   <ClipboardList size={20} className="text-brand-700" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 truncate">{tpl?.name ?? 'Planilla'}</p>
+                  <p className="font-semibold text-gray-800 truncate">
+                    {tpl?.name ?? 'Planilla'}
+                    {pm.label ? ` — ${pm.label}` : ''}
+                  </p>
                   <p className="text-xs text-gray-400 mt-0.5">{tpl?.description}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
