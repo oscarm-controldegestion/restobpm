@@ -273,26 +273,8 @@ export default function LandingPage() {
             <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">Elige el plan que se adapta a tu negocio</h2>
             <p className="mt-3 text-gray-500">Todos los planes incluyen 3 días de prueba gratuita. Sin tarjeta de crédito.</p>
           </div>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {/* Plan 1 */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-7 shadow-sm flex flex-col landing-card-hover">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              </div>
-              <h3 className="text-lg font-bold text-gray-800">Cumplimiento Inicial</h3>
-              <div className="mt-3 mb-1"><span className="text-4xl font-extrabold text-gray-900">$14.990</span></div>
-              <p className="text-xs text-gray-400 mb-6">/mes + IVA</p>
-              <ul className="space-y-2.5 flex-1 mb-6 text-sm text-gray-600">
-                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>2 usuarios operadores + 1 supervisor</li>
-                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Módulos: Temperatura, Personal e Inocuidad</li>
-                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Alertas push</li>
-                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Soporte web</li>
-              </ul>
-              <Link to="/register" className="w-full text-center bg-gray-900 hover:bg-gray-700 text-white font-bold py-3 rounded-xl text-sm transition-colors block">
-                Comenzar gratis
-              </Link>
-            </div>
-            {/* Plan 2 (Destacado) */}
+          <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {/* Plan 1 — Cumplimiento Total (Destacado) */}
             <div className="bg-[#1F3864] rounded-2xl p-7 shadow-xl flex flex-col relative landing-card-hover ring-2 ring-[#1F3864] ring-offset-2">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                 <span className="bg-amber-400 text-amber-900 text-xs font-extrabold px-4 py-1.5 rounded-full shadow">★ Más popular</span>
@@ -301,32 +283,34 @@ export default function LandingPage() {
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               </div>
               <h3 className="text-lg font-bold text-white">Cumplimiento Total</h3>
-              <div className="mt-3 mb-1"><span className="text-4xl font-extrabold text-white">$19.900</span></div>
+              <div className="mt-3 mb-1"><span className="text-4xl font-extrabold text-white">$14.900</span></div>
               <p className="text-xs text-white/50 mb-6">/mes + IVA</p>
               <ul className="space-y-2.5 flex-1 mb-6 text-sm text-white/80">
-                <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span>Hasta 10 usuarios (8 op. + 2 supervisores)</li>
+                <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span><strong className="text-white">Usuarios ilimitados</strong></li>
                 <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span><strong className="text-white">Todos los módulos BPM</strong></li>
+                <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span>Manuales y documentos BPM</li>
                 <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span>Alertas push</li>
                 <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span>Soporte web</li>
                 <li className="flex items-start gap-2"><span className="text-amber-300 font-bold mt-0.5">+</span>Asesoría en resolución sanitaria <em className="text-white/50">(servicio opcional)</em></li>
-                <li className="flex items-start gap-2"><span className="text-amber-300 font-bold mt-0.5">+</span>Revisión de local <em className="text-white/50">(servicio opcional)</em></li>
+                <li className="flex items-start gap-2"><span className="text-amber-300 font-bold mt-0.5">+</span>Revisión de establecimiento <em className="text-white/50">(servicio opcional)</em></li>
               </ul>
               <Link to="/register" className="w-full text-center bg-white hover:bg-gray-100 text-[#1F3864] font-bold py-3 rounded-xl text-sm transition-colors block">
                 Comenzar gratis
               </Link>
             </div>
-            {/* Plan 3 */}
+            {/* Plan 2 — Múltiples Sucursales */}
             <div className="bg-white rounded-2xl border border-gray-200 p-7 shadow-sm flex flex-col landing-card-hover">
               <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
                 <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
               </div>
               <h3 className="text-lg font-bold text-gray-800">Múltiples Sucursales</h3>
-              <div className="mt-3 mb-1"><span className="text-4xl font-extrabold text-gray-900">$39.900</span></div>
+              <div className="mt-3 mb-1"><span className="text-4xl font-extrabold text-gray-900">$28.900</span></div>
               <p className="text-xs text-gray-400 mb-6">/mes + IVA</p>
               <ul className="space-y-2.5 flex-1 mb-6 text-sm text-gray-600">
                 <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Todo lo de Cumplimiento Total</li>
-                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span><strong>Hasta 5 sucursales</strong></li>
+                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span><strong>Hasta 4 sucursales</strong></li>
                 <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Gestión centralizada multi-local</li>
+                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Usuarios ilimitados por sucursal</li>
                 <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Soporte web prioritario</li>
               </ul>
               <Link to="/register" className="w-full text-center bg-gray-900 hover:bg-gray-700 text-white font-bold py-3 rounded-xl text-sm transition-colors block">
