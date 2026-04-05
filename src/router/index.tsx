@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import AppLayout from '@/components/layout/AppLayout'
+import LandingPage from '@/pages/LandingPage'
 import LoginPage from '@/pages/auth/LoginPage'
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
@@ -30,28 +31,18 @@ function ProtectedRoute({ children, allowedRoles }: { children: JSX.Element; all
   return children
 }
 
-function RoleBasedHome() {
-  const { profile } = useAuth()
-  if (!profile) return <Navigate to="/login" replace />
-  switch (profile.role) {
-    case 'admin':      return <Navigate to="/admin/dashboard" replace />
-    case 'supervisor': return <Navigate to="/supervisor/planillas" replace />
-    case 'operator':   return <Navigate to="/operator/home" replace />
-    default:           return <Navigate to="/login" replace />
-  }
-}
-
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ── Pública ── */}
-        <Route path="/login" element={<LoginPage />} />
+
+        {/* ── Públicas (sin login requerido) ───────────────────────── */}
+        <Route path="/"              element={<LandingPage />} />
+        <Route path="/login"         element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* ── App ── */}
-        <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-          <Route index element={<RoleBasedHome />} />
+        {/* ── App (requiere autenticación) ─────────────────────────── */}
+        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
 
           {/* Admin */}
           <Route path="admin/dashboard"    element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
@@ -63,7 +54,7 @@ export default function AppRouter() {
 
           {/* Supervisor */}
           <Route path="supervisor/dashboard"        element={<ProtectedRoute allowedRoles={['admin','supervisor']}><SupervisorDashboard /></ProtectedRoute>} />
-          <Route path="supervisor/planillas"         element={<ProtectedRoute allowedRoles={['admin','supervisor']}><PlanillasDashboard /></ProtectedRoute>} />
+          <Route path="supervisor/planillas"        element={<ProtectedRoute allowedRoles={['admin','supervisor']}><PlanillasDashboard /></ProtectedRoute>} />
           <Route path="supervisor/history"          element={<ProtectedRoute allowedRoles={['admin','supervisor']}><ChecklistHistory /></ProtectedRoute>} />
           <Route path="supervisor/non-conformities" element={<ProtectedRoute allowedRoles={['admin','supervisor']}><NonConformities /></ProtectedRoute>} />
           <Route path="supervisor/reports"          element={<ProtectedRoute allowedRoles={['admin','supervisor']}><Reports /></ProtectedRoute>} />
@@ -71,11 +62,12 @@ export default function AppRouter() {
           <Route path="supervisor/documentos"       element={<ProtectedRoute allowedRoles={['admin','supervisor']}><Documentos /></ProtectedRoute>} />
 
           {/* Operator */}
-          <Route path="operator/planillas" element={<ProtectedRoute allowedRoles={['admin','supervisor','operator']}><OperatorPlanillas /></ProtectedRoute>} />
           <Route path="operator/home"      element={<ProtectedRoute allowedRoles={['admin','supervisor','operator']}><OperatorHome /></ProtectedRoute>} />
+          <Route path="operator/planillas" element={<ProtectedRoute allowedRoles={['admin','supervisor','operator']}><OperatorPlanillas /></ProtectedRoute>} />
           <Route path="operator/checklist/:moduleCode" element={<ProtectedRoute allowedRoles={['admin','supervisor','operator']}><ChecklistExecution /></ProtectedRoute>} />
         </Route>
 
+        {/* Cualquier ruta desconocida → landing */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
