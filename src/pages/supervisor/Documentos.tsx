@@ -6,13 +6,25 @@
  */
 
 import { useState } from 'react'
-import { FileText, Printer, ChevronRight, BookOpen, ArrowLeft } from 'lucide-react'
+import { FileText, Printer, ChevronRight, BookOpen, ArrowLeft, ClipboardList } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import ProgramaHigiene from './documentos/ProgramaHigiene'
+import ManualBPM from './documentos/ManualBPM'
 
-type DocView = null | 'programa-higiene'
+type DocView = null | 'programa-higiene' | 'manual-bpm'
 
 const DOCS = [
+  {
+    id: 'manual-bpm' as const,
+    icon: ClipboardList,
+    title: 'Manual BPM',
+    description:
+      'Manual completo de Buenas Prácticas de Manufactura conforme al D.S. N° 977/96 del MINSAL. ' +
+      'Cubre instalaciones, agua, higiene del personal, temperaturas, limpieza, plagas, residuos, ' +
+      'trazabilidad, capacitación y registros. Personalizado con los datos del establecimiento.',
+    badge: 'D.S. 977/96',
+    badgeColor: 'bg-blue-900 text-blue-300',
+  },
   {
     id: 'programa-higiene' as const,
     icon: BookOpen,
@@ -30,7 +42,8 @@ export default function Documentos() {
   const { tenant } = useAuth()
   const [view, setView] = useState<DocView>(null)
 
-  if (view === 'programa-higiene') {
+  if (view) {
+    const docTitle = DOCS.find(d => d.id === view)?.title ?? ''
     return (
       <div>
         {/* Back bar */}
@@ -43,7 +56,7 @@ export default function Documentos() {
             Área Documental
           </button>
           <span className="text-gray-600">/</span>
-          <span className="text-sm text-gray-200 font-medium">Programa de Higiene Estándar</span>
+          <span className="text-sm text-gray-200 font-medium">{docTitle}</span>
           <div className="flex-1" />
           <button
             onClick={() => window.print()}
@@ -53,7 +66,8 @@ export default function Documentos() {
             Imprimir / PDF
           </button>
         </div>
-        <ProgramaHigiene />
+        {view === 'manual-bpm'       && <ManualBPM />}
+        {view === 'programa-higiene' && <ProgramaHigiene />}
       </div>
     )
   }

@@ -252,15 +252,50 @@ export default function ProgramaHigiene() {
           </p>
         </Section>
 
-        {/* Firma */}
-        <div className="mt-10 print:mt-8 grid grid-cols-2 gap-8 text-sm">
-          {['Elaborado por', 'Aprobado por'].map(role => (
-            <div key={role} className="border-t border-gray-600 print:border-gray-400 pt-3">
-              <p className="text-gray-400 print:text-gray-600 text-xs mb-8">{role}</p>
-              <div className="border-b border-gray-600 print:border-gray-400 mb-1" />
-              <p className="text-gray-500 print:text-gray-500 text-xs">Nombre y firma</p>
+        {/* Firma empresa */}
+        <div className="mt-10 print:mt-8 border border-gray-700 print:border-gray-400 rounded-xl print:rounded-none p-6">
+          <p className="text-xs text-gray-400 print:text-gray-600 uppercase tracking-widest mb-4">
+            Autorización y firma del establecimiento
+          </p>
+          <div className="grid sm:grid-cols-2 gap-6">
+            {/* Datos empresa */}
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="text-xs text-gray-500 print:text-gray-500 mb-0.5">Razón Social</p>
+                <p className="font-semibold text-gray-100 print:text-black">{tenant?.name ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 print:text-gray-500 mb-0.5">RUT</p>
+                <p className="font-semibold text-gray-100 print:text-black">{tenant?.rut ?? '—'}</p>
+              </div>
+              {tenant?.address && (
+                <div>
+                  <p className="text-xs text-gray-500 print:text-gray-500 mb-0.5">Dirección</p>
+                  <p className="text-gray-300 print:text-black">{tenant.address}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-gray-500 print:text-gray-500 mb-0.5">Fecha</p>
+                <p className="text-gray-300 print:text-black">{today}</p>
+              </div>
             </div>
-          ))}
+
+            {/* Firmas */}
+            <div className="space-y-6">
+              {['Elaborado por', 'Aprobado por'].map(role => (
+                <div key={role}>
+                  <p className="text-xs text-gray-500 print:text-gray-500 mb-6">{role}</p>
+                  <div className="border-b border-gray-600 print:border-gray-400 mb-1" />
+                  <p className="text-xs text-gray-600 print:text-gray-400">Nombre, cargo y firma</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sello / pie */}
+          <div className="mt-4 pt-4 border-t border-gray-700 print:border-gray-300 text-xs text-gray-600 print:text-gray-400 text-center">
+            {tenant?.name ?? ''}{tenant?.rut ? ` · RUT ${tenant.rut}` : ''} · Programa de Higiene Estándar v1.0 · RestoBPM
+          </div>
         </div>
 
       </div>
