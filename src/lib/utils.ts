@@ -123,5 +123,5 @@ export const planColor: Record<string, string> = {
 export const formatCLP = (amount: number): string =>
   new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(amount)
 
-// ─── RE-EXPORT pricing plans ──────────────────────────────────────────────────
+// re-export PRICING_PLANS so Subscription.tsx can import from utils
 export { PRICING_PLANS } from '@/types'
