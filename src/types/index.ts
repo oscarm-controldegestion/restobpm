@@ -301,6 +301,8 @@ export type AlertType         = 'not_started' | 'incomplete' | 'overdue'
 export type PlanillaValueType = 'compliance' | 'temperature' | 'compliance_mt'
 export type TimeSlot          = 'morning' | 'afternoon'
 
+export type PlanillaLayoutType = 'default' | 'worker_hygiene'
+
 export interface PlanillaTemplate {
   id: string
   tenant_id: string | null
@@ -308,7 +310,32 @@ export interface PlanillaTemplate {
   description: string | null
   active: boolean
   order_index: number
+  layout_type: PlanillaLayoutType
   created_at: string
+}
+
+// ─── WORKERS ─────────────────────────────────────────────────────────────────
+export type WorkerShift = 'AM' | 'PM' | 'Ambos'
+
+export interface Worker {
+  id: string
+  tenant_id: string
+  name: string
+  rut: string
+  shift: WorkerShift
+  active: boolean
+  order_index: number
+  created_at: string
+}
+
+export interface HigieneEntry {
+  id: string
+  tenant_id: string
+  month_id: string
+  worker_id: string
+  item_id: string
+  day: number
+  value: 'S' | 'N' | null
 }
 
 export interface PlanillaItem {

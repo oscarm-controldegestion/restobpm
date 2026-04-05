@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { User, Lock, Building2, CheckCircle, AlertCircle } from 'lucide-react'
+import { User, Lock, Building2, CheckCircle, AlertCircle, Users, Pencil, Trash2, Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
+import { useWorkers } from '@/hooks/usePlanillas'
+import type { WorkerShift } from '@/types'
 
-type Tab = 'perfil' | 'password' | 'establecimiento'
+type Tab = 'perfil' | 'password' | 'establecimiento' | 'trabajadores'
 
 export default function Settings() {
   const { profile, tenant, refreshProfile } = useAuth()
@@ -106,10 +108,41 @@ export default function Settings() {
   }
 
   // ── UI ──────────────────────────────────────────────────────────────────────
+  // ── Workers state ──────────────────────────────────────────────────────────
+  const { workers, addWorker, updateWorker, deactivateWorker } = useWorkers()
+  const [wForm, setWForm] = useState({ name: '', rut: '', shift: 'AM' as WorkerShift })
+  const [wEditing, setWEditing] = useState<string | null>(null)
+  const [wSaving, setWSaving]   = useState(false)
+  const [wMsg, setWMsg]         = useState<{ ok: boolean; text: string } | null>(null)
+
+  const handleAddWorker = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!wForm.name.trim() || !wForm.rut.trim()) return
+    setWSaving(true)
+    const result = await addWorker(wForm.name.trim(), wForm.rut.trim(), wForm.shift)
+    setWSaving(false)
+    if (result) {
+      setWForm({ name: '', rut: '', shift: 'AM' })
+      setWMsg({ ok: true, text: 'Trabajador agregado.' })
+    } else {
+      setWMsg({ ok: false, text: 'Error al guardar. Intenta nuevamente.' })
+    }
+    setTimeout(() => setWMsg(null), 3000)
+  }
+
+  const handleUpdateWorker = async (id: string) => {
+    setWSaving(true)
+    await updateWorker(id, { name: wForm.name.trim(), rut: wForm.rut.trim(), shift: wForm.shift })
+    setWSaving(false)
+    setWEditing(null)
+    setWForm({ name: '', rut: '', shift: 'AM' })
+  }
+
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'perfil',          label: 'Mi Perfil',       icon: User      },
     { id: 'password',        label: 'Contraseña',      icon: Lock      },
     { id: 'establecimiento', label: 'Establecimiento', icon: Building2 },
+    { id: 'trabajadores',    label: 'Trabajadores',    icon: Users     },
   ]
 
   function Msg({ m }: { m: { ok: boolean; text: string } }) {
@@ -291,6 +324,105 @@ export default function Settings() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+      {/* ── Tab: Trabajadores ── */}
+      {tab === 'trabajadores' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="font-semibold text-gray-800 mb-1">Manipuladores de alimentos</h2>
+            <p className="text-xs text-gray-400 mb-5">
+              Los trabajadores registrados aquí aparecen como filas en la planilla de Higiene de Manipuladores.
+            </p>
+
+            {/* Add / Edit form */}
+            <form
+              onSubmit={wEditing ? (e) => { e.preventDefault(); handleUpdateWorker(wEditing) } : handleAddWorker}
+              className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6"
+            >
+              <input
+                required
+                placeholder="Nombre completo *"
+                value={wForm.name}
+                onChange={e => setWForm(f => ({ ...f, name: e.target.value }))}
+                className="sm:col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <input
+                required
+                placeholder="RUT (ej: 12.345.678-9) *"
+                value={wForm.rut}
+                onChange={e => setWForm(f => ({ ...f, rut: e.target.value }))}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <div className="flex gap-2">
+                <select
+                  value={wForm.shift}
+                  onChange={e => setWForm(f => ({ ...f, shift: e.target.value as WorkerShift }))}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                  <option value="Ambos">Ambos</option>
+                </select>
+                <button
+                  type="submit"
+                  disabled={wSaving}
+                  className="px-3 py-2 bg-brand-700 text-white text-sm font-semibold rounded-lg hover:bg-brand-900 disabled:opacity-60 transition-colors flex items-center gap-1"
+                >
+                  {wEditing ? <CheckCircle size={15} /> : <Plus size={15} />}
+                  {wEditing ? 'OK' : 'Agregar'}
+                </button>
+                {wEditing && (
+                  <button
+                    type="button"
+                    onClick={() => { setWEditing(null); setWForm({ name: '', rut: '', shift: 'AM' }) }}
+                    className="px-3 py-2 border border-gray-300 text-gray-500 text-sm rounded-lg hover:bg-gray-50"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {wMsg && <Msg m={wMsg} />}
+
+            {/* Worker list */}
+            {workers.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">No hay trabajadores registrados aún.</p>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {workers.map((w, idx) => (
+                  <div key={w.id} className="flex items-center gap-3 py-3">
+                    <span className="text-gray-400 text-xs w-6 text-right font-mono">{idx + 1}.</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">{w.name}</p>
+                      <p className="text-xs text-gray-400">{w.rut}</p>
+                    </div>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      w.shift === 'AM' ? 'bg-blue-100 text-blue-700' :
+                      w.shift === 'PM' ? 'bg-orange-100 text-orange-700' :
+                                         'bg-purple-100 text-purple-700'
+                    }`}>{w.shift}</span>
+                    <button
+                      onClick={() => {
+                        setWEditing(w.id)
+                        setWForm({ name: w.name, rut: w.rut, shift: w.shift })
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => { if (confirm(`¿Eliminar a ${w.name}?`)) deactivateWorker(w.id) }}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

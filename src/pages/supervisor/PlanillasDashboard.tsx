@@ -27,6 +27,7 @@ import {
 } from '@/hooks/usePlanillas'
 import PlanillaGrid from '@/components/planilla/PlanillaGrid'
 import ChecklistView from '@/components/planilla/ChecklistView'
+import HigieneManipuladoresView from '@/components/planilla/HigieneManipuladoresView'
 import type { PlanillaMonth, PlanillaTemplate, PlanillaItem, PlanillaFrequency, PlanillaValueType, Area } from '@/types'
 
 const MONTH_NAMES = [
@@ -53,6 +54,7 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
   const { entryMap, tempMap, complianceMTMap, entries }   = usePlanillaEntries(planillaMonth.id)
 
   const isMonthlyChecklist = items.length > 0 && items.every(i => i.frequency === 'monthly')
+  const isWorkerHygiene    = planillaMonth.template?.layout_type === 'worker_hygiene'
 
   const totalCells  = items.filter(i => i.value_type === 'compliance').length
     * new Date(planillaMonth.year, planillaMonth.month, 0).getDate()
@@ -104,7 +106,15 @@ function PlanillaDetail({ planillaMonth, onBack }: { planillaMonth: PlanillaMont
         </div>
       )}
 
-      {isMonthlyChecklist ? (
+      {isWorkerHygiene ? (
+        <HigieneManipuladoresView
+          monthId={planillaMonth.id}
+          year={planillaMonth.year}
+          month={planillaMonth.month}
+          items={items}
+          readOnly={false}
+        />
+      ) : isMonthlyChecklist ? (
         <ChecklistView
           monthId={planillaMonth.id}
           items={items}

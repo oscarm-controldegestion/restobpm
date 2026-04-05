@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import type {
   PlanillaTemplate, PlanillaItem, PlanillaMonth, PlanillaMonthItem,
   PlanillaEntry, PlanillaAlert, PlanillaValue, TimeSlot, Profile, Area,
-  PlanillaDocument
+  PlanillaDocument, Worker, HigieneEntry, WorkerShift
 } from '@/types'
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -692,4 +692,103 @@ export function usePlanillaMonthItems(monthId: string | null) {
   }, [monthId])
 
   return { itemIds, loading, reload: load, syncItems }
+}
+
+// ── Workers (manipuladores de alimentos) ─────────────────────────────────────
+export function useWorkers() {
+  const { tenant } = useAuth()
+  const [workers, setWorkers]   = useState<Worker[]>([])
+  const [loading, setLoading]   = useState(true)
+
+  const load = useCallback(async () => {
+    if (!tenant) return
+    const { data } = await supabase
+      .from('workers')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .eq('active', true)
+      .order('order_index')
+      .order('name')
+    setWorkers((data ?? []) as Worker[])
+    setLoading(false)
+  }, [tenant])
+
+  useEffect(() => { load() }, [load])
+
+  const addWorker = useCallback(async (name: string, rut: string, shift: WorkerShift) => {
+    if (!tenant) return null
+    const { data, error } = await supabase
+      .from('workers')
+      .insert({ tenant_id: tenant.id, name, rut, shift })
+      .select()
+      .single()
+    if (!error) await load()
+    return error ? null : (data as Worker)
+  }, [tenant, load])
+
+  const updateWorker = useCallback(async (id: string, updates: Partial<Pick<Worker, 'name' | 'rut' | 'shift' | 'active'>>) => {
+    const { error } = await supabase.from('workers').update(updates).eq('id', id)
+    if (!error) await load()
+    return !error
+  }, [load])
+
+  const deactivateWorker = useCallback(async (id: string) => {
+    const { error } = await supabase.from('workers').update({ active: false }).eq('id', id)
+    if (!error) await load()
+    return !error
+  }, [load])
+
+  return { workers, loading, reload: load, addWorker, updateWorker, deactivateWorker }
+}
+
+// ── Hygiene entries (per worker × item × day) ────────────────────────────────
+export function useHigieneEntries(monthId: string | null) {
+  const { tenant } = useAuth()
+  const [entries, setEntries]   = useState<HigieneEntry[]>([])
+  const [loading, setLoading]   = useState(true)
+
+  const load = useCallback(async () => {
+    if (!monthId || !tenant) { setLoading(false); return }
+    const { data } = await supabase
+      .from('planilla_hygiene_entries')
+      .select('*')
+      .eq('month_id', monthId)
+    setEntries((data ?? []) as HigieneEntry[])
+    setLoading(false)
+  }, [monthId, tenant])
+
+  useEffect(() => { load() }, [load])
+
+  const getValue = useCallback((workerId: string, itemId: string, day: number): 'S' | 'N' | null => {
+    const e = entries.find(e => e.worker_id === workerId && e.item_id === itemId && e.day === day)
+    return e?.value ?? null
+  }, [entries])
+
+  const setValue = useCallback(async (workerId: string, itemId: string, day: number, value: 'S' | 'N' | null) => {
+    if (!monthId || !tenant) return
+
+    // Optimistic update
+    setEntries(prev => {
+      const idx = prev.findIndex(e => e.worker_id === workerId && e.item_id === itemId && e.day === day)
+      if (value === null) return prev.filter((_, i) => i !== idx)
+      if (idx >= 0) return prev.map((e, i) => i === idx ? { ...e, value } : e)
+      return [...prev, {
+        id: crypto.randomUUID(), tenant_id: tenant.id, month_id: monthId,
+        worker_id: workerId, item_id: itemId, day, value
+      }]
+    })
+
+    if (value === null) {
+      await supabase.from('planilla_hygiene_entries').delete()
+        .eq('month_id', monthId).eq('worker_id', workerId)
+        .eq('item_id', itemId).eq('day', day)
+    } else {
+      await supabase.from('planilla_hygiene_entries').upsert({
+        tenant_id: tenant.id, month_id: monthId,
+        worker_id: workerId, item_id: itemId, day, value
+      }, { onConflict: 'month_id,worker_id,item_id,day' })
+    }
+  }, [monthId, tenant])
+
+  return { entries, loading, getValue, setValue, reload: load }
 }
