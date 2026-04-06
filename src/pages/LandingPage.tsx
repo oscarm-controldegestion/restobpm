@@ -47,6 +47,11 @@ export default function LandingPage() {
 
       {/* ── NAVBAR ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#111f3a]/95 backdrop-blur border-b border-white/10">
+        {/* Franja de colores SEREMI de Salud */}
+        <div className="flex h-1">
+          <div className="flex-1 bg-[#1a3a7c]"></div>
+          <div className="flex-1 bg-[#d52b1e]"></div>
+        </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 text-white font-bold text-lg">
             <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
@@ -83,7 +88,7 @@ export default function LandingPage() {
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6 landing-fade-up landing-fade-up-1">
               La SEREMI DE SALUD no avisa.<br/>
-              <span className="text-blue-300">¿Tu local está listo?</span>
+              <span className="text-[#ff4d55]">¿Tu local está listo?</span>
             </h1>
             <p className="text-lg sm:text-xl text-white/70 leading-relaxed mb-10 max-w-2xl landing-fade-up landing-fade-up-2 text-justify">
               RestoBPM digitaliza el control de tus Buenas Prácticas de Manufactura de Alimentos.
@@ -179,7 +184,7 @@ export default function LandingPage() {
               { bg: 'bg-amber-50', border: 'border-amber-200', ibg: 'bg-amber-500', title: 'Alertas push automáticas', desc: 'Recibe notificaciones cuando una temperatura se desvía del rango, un checklist no se completa a tiempo o surge una no conformidad.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
               { bg: 'bg-blue-50', border: 'border-blue-200', ibg: 'bg-blue-600', title: 'Informe PDF para la SEREMI DE SALUD', desc: 'Genera el informe de cumplimiento BPM en segundos. Con firma digital, folio y todos los registros del período. Muéstralo en la fiscalización.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
               { bg: 'bg-purple-50', border: 'border-purple-200', ibg: 'bg-purple-600', title: 'Métricas e historial', desc: 'Analiza tendencias, puntajes de cumplimiento por módulo y evolución mensual. Toma decisiones con datos reales de tu establecimiento.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
-              { bg: 'bg-indigo-50', border: 'border-indigo-200', ibg: 'bg-indigo-600', title: 'Gestión de roles y operadores', desc: 'Asigna roles de operador, supervisor y administrador con permisos diferenciados por función y responsabilidad.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+              { bg: 'bg-indigo-50', border: 'border-indigo-200', ibg: 'bg-indigo-600', title: 'Gestión de roles y operadores', desc: 'Asigna roles de operador, supervisor y administrador con permisos diferenciados por función y responsabilidad.', icon: <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
             ].map((f, i) => (
               <div key={i} className={`${f.bg} border ${f.border} rounded-2xl p-6 landing-card-hover`}>
                 <div className={`w-12 h-12 ${f.ibg} rounded-xl flex items-center justify-center mb-4`}>{f.icon}</div>
@@ -246,123 +251,33 @@ export default function LandingPage() {
                 </div>
                 <h3 className="font-bold text-gray-800 text-lg mb-2">{s.title}</h3>
                 <p className="text-sm text-gray-500 leading-relaxed">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-14 text-center">
-            <Link to="/register" className="inline-flex items-center gap-2 bg-[#1F3864] hover:bg-[#111f3a] text-white font-bold text-base px-8 py-4 rounded-xl transition-colors shadow-lg">
-              Comenzar ahora — gratis por 3 días
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PRECIOS ── */}
-      <section id="precios" className="py-20 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <p className="text-sm font-semibold text-[#1F3864] uppercase tracking-widest mb-3">Planes</p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">Elige el plan que se adapta a tu negocio</h2>
-            <p className="mt-3 text-gray-500">Todos los planes incluyen 3 días de prueba gratuita. Sin tarjeta de crédito.</p>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            {/* Plan 1 — Cumplimiento Total (Destacado) */}
-            <div className="bg-[#1F3864] rounded-2xl p-7 shadow-xl flex flex-col relative landing-card-hover ring-2 ring-[#1F3864] ring-offset-2">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <span className="bg-amber-400 text-amber-900 text-xs font-extrabold px-4 py-1.5 rounded-full shadow">★ Más popular</span>
-              </div>
-              <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              </div>
-              <h3 className="text-lg font-bold text-white">Cumplimiento Total</h3>
-              <div className="mt-3 mb-1"><span className="text-4xl font-extrabold text-white">$9.900</span></div>
-              <p className="text-xs text-white/50 mb-6">/mes + IVA</p>
-              <ul className="space-y-2.5 flex-1 mb-6 text-sm text-white/80">
-                <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span>Manuales y documentos normativos</li>
-                <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span>Respaldo de información</li>
-                <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span>Informe en un click ante fiscalización</li>
-                <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span>Alertas push</li>
-                <li className="flex items-start gap-2"><span className="text-green-300 font-bold mt-0.5">✓</span>Soporte web</li>
-              </ul>
-              <Link to="/register" className="w-full text-center bg-white hover:bg-gray-100 text-[#1F3864] font-bold py-3 rounded-xl text-sm transition-colors block">
-                Comenzar gratis
-              </Link>
-            </div>
-            {/* Plan 2 — Múltiples Sucursales */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-7 shadow-sm flex flex-col landing-card-hover">
-              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-              </div>
-              <h3 className="text-lg font-bold text-gray-800">Múltiples Sucursales</h3>
-              <div className="mt-3 mb-1"><span className="text-4xl font-extrabold text-gray-900">$28.900</span></div>
-              <p className="text-xs text-gray-400 mb-6">/mes + IVA</p>
-              <ul className="space-y-2.5 flex-1 mb-6 text-sm text-gray-600">
-                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Todo lo de Cumplimiento Total</li>
-                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span><strong>Hasta 4 sucursales</strong></li>
-                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Gestión centralizada multi-local</li>
-                <li className="flex items-start gap-2"><span className="text-green-500 font-bold mt-0.5">✓</span>Soporte web prioritario</li>
-              </ul>
-              <Link to="/register" className="w-full text-center bg-gray-900 hover:bg-gray-700 text-white font-bold py-3 rounded-xl text-sm transition-colors block">
-                Comenzar gratis
-              </Link>
-            </div>
-          </div>
-          <p className="text-center text-xs text-gray-400 mt-8">Precios en pesos chilenos (CLP) sin IVA (19%). Facturación mensual. Cancela cuando quieras.</p>
-        </div>
-      </section>
-
-      {/* ── CTA FINAL ── */}
-      <section className="landing-gradient-cta py-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">Empieza hoy. La próxima fiscalización no espera.</h2>
-          <p className="text-white/70 text-lg mb-10">3 días de acceso completo, sin tarjeta de crédito. Si decides continuar, elige el plan que se adapte a tu negocio.</p>
-          <Link to="/register" className="inline-flex items-center gap-3 bg-white text-[#1F3864] font-extrabold text-lg px-10 py-5 rounded-2xl hover:bg-gray-100 transition-all shadow-2xl">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Crear cuenta gratis
-          </Link>
-          <p className="text-white/40 text-sm mt-5">Sin tarjeta · Sin compromiso · Datos seguros en Chile</p>
-        </div>
-      </section>
-
-      {/* ── FOOTER ── */}
-      <footer className="bg-[#111f3a] border-t border-white/10 py-12">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="grid sm:grid-cols-3 gap-8 mb-10">
-            <div>
-              <div className="flex items-center gap-2 text-white font-bold text-base mb-3">
-                <div className="w-7 h-7 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-white" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                </div>
-                RestoBPM
-              </div>
-              <p className="text-white/50 text-sm leading-relaxed">Sistema de apoyo en control de Buenas Prácticas de Manufactura para establecimientos de alimentos en Chile.</p>
-              <p className="text-white/30 text-xs mt-3">D.S. 977/96 — RSA Chile</p>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold text-sm mb-4">Producto</h4>
-              <ul className="space-y-2 text-sm text-white/50">
-                <li><a href="#funciones" className="hover:text-white transition-colors">Funcionalidades</a></li>
-                <li><a href="#modulos"   className="hover:text-white transition-colors">Módulos BPM</a></li>
-                <li><a href="#precios"   className="hover:text-white transition-colors">Precios</a></li>
-                <li><Link to="/register" className="hover:text-white transition-colors">Prueba gratis</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold text-sm mb-4">Cuenta</h4>
-              <ul className="space-y-2 text-sm text-white/50">
-                <li><Link to="/login"    className="hover:text-white transition-colors">Iniciar sesión</Link></li>
-                <li><Link to="/register" className="hover:text-white transition-colors">Registrarse</Link></li>
-                <li><a href="mailto:contacto@restobpm.cl" className="hover:text-white transition-colors">Contacto</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/30">
-            <p>© {year} RestoBPM · Todos los derechos reservados</p>
-            <p>Hecho en Chile 🇨🇱</p>
-          </div>
-        </div>
-      </footer>
-    </div>
-  )
-}
+           �]���
+J_B��]���]��\�Ә[YOH�]LM^X�[�\����[���H�ܙY�\�\���\�Ә[YOH�[�[�KY�^][\�X�[�\��\L���V��Q��
+�Hݙ\����V��LLY��WH^]�]H�۝X��^X�\�HNKM��[�Y^�[��][ۋX��ܜ��Y��[ȏ����Y[��\�ZܘH8�%ܘ]\�܈�0�X\ݙ��Y]Л�H�����[H��ۙH�����OH��\��[���܈�����U�YH���H��\�Ә[YOH��MM�\�XKZY[�H��YH��[�HOH�H�LOH�L���H�NH�L�H�L��Ϗ�[[�H�[��H�L�
+HNHL�L�NH�Ϗ�ݙς��[�ς��]����]�����X�[ۏ����ʈ8� 8� �P�S��8� 8� 
+��B��X�[ۈYH��X�[�Ȉ�\�Ә[YOH�KL���Yܘ^KML���]��\�Ә[YOH�X^]�M�^X]]�M�N�M����]��\�Ә[YOH�^X�[�\�X�LM����\�Ә[YOH�^\�H�۝\�[ZX��^V��Q��
+�H\\��\�H�X��[��]�Y\�X�Lȏ�[�\������\�Ә[YOH�^L��N�^M�۝Y^�X��^Yܘ^KNL��[Y�H[[�]YH�HY\HHH�Y���[������\�Ә[YOH�]L�^Yܘ^KML�������[�\�[��^Y[��0�X\�H�YX�Hܘ]Z]K��[�\��]HHܰ�Y]ˏ����]���]��\�Ә[YOH�ܚY�N�ܚYX���L��\M�X^]�L�^X]]ȏ���ʈ[�H8�%�[\[ZY[���[
+\�X�Y�H
+��B�]��\�Ә[YOH���V��Q��
+�H��[�YL�M��Y��^�^�^X���[]]�H[�[��X�\�Zݙ\��[��L��[��V��Q��
+�H�[��[ٙ��]L����]��\�Ә[YOH�X���]H]�MY�LK̈]�[��]K^LK̈����[��\�Ә[YOH���X[X�\�M^X[X�\�NL^^��۝Y^�X��MKLK�H��[�YY�[�Y�ȏ��!Hp�\��[\���[����]���]��\�Ә[YOH��LLLL��]�]K�MH��[�Y^�^][\�X�[�\��\�Y�KX�[�\�X�M���ݙ��\�Ә[YOH��MHMH^]�]H��[H��ۙH�����OH��\��[���܈�����U�YH����Y]Л�H������Y�ۈ�[��H�L��MK�H�����K���M�M�MN�N�K��L�Mˍ��
+K���K��
+�M�M�K����LH���L���Ϗ�ݙς��]�����\�Ә[YOH�^[��۝X��^]�]H���[\[ZY[���[�ς�]��\�Ә[YOH�]L�X�LH���[��\�Ә[YOH�^M�۝Y^�X��^]�]H��K�L��[���]����\�Ә[YOH�^^�^]�]K�LX�M����Y\�
+�U�O���[�\�Ә[YOH��X�K^KL��H�^LHX�M�^\�H^]�]K����H�\�Ә[YOH��^][\�\�\��\L����[��\�Ә[YOH�^YܙY[�L��۝X��]L�H���$���[��X[�X[\�H��[Y[����ܛX]]����O��H�\�Ә[YOH��^][\�\�\��\L����[��\�Ә[YOH�^YܙY[�L��۝X��]L�H���$���[���\�[�H[��ܛXX�p�ۏ�O��H�\�Ә[YOH��^][\�\�\��\L����[��\�Ә[YOH�^YܙY[�L��۝X��]L�H���$���[��[��ܛYH[�[��X��[�H�\��[^�X�p�ۏ�O��H�\�Ә[YOH��^][\�\�\��\L����[��\�Ә[YOH�^YܙY[�L��۝X��]L�H���$���[��[\�\�\��O��H�\�Ә[YOH��^][\�\�\��\L����[��\�Ә[YOH�^YܙY[�L��۝X��]L�H���$���[����ܝH�X��O���[��[���H�ܙY�\�\���\�Ә[YOH��Y�[^X�[�\���]�]Hݙ\����Yܘ^KLL^V��Q��
+�H�۝X��KL���[�Y^^\�H�[��][ۋX��ܜ����ȏ����Y[��\�ܘ]\�[�ς��]����ʈ[��8�%p�\\��X�\��[\�
+��B�]��\�Ә[YOH���]�]H��[�YL��ܙ\��ܙ\�Yܘ^KL�M��Y��\�H�^�^X��[�[��X�\�Zݙ\����]��\�Ә[YOH��LLLL��Z[�Y��LL��[�Y^�^][\�X�[�\��\�Y�KX�[�\�X�M���ݙ��\�Ә[YOH��MHMH^Z[�Y��M���[H��ۙH�����OH��\��[���܈�����U�YH����Y]Л�H������X�H���OH�Ȉ�YH���ZY�H�M��H����OH���Ϗ]H�LM��U�XL��L�L�ML��L���M��Ϗ�ݙς��]�����\�Ә[YOH�^[��۝X��^Yܘ^KN��p�\\��X�\��[\��ς�]��\�Ә[YOH�]L�X�LH���[��\�Ә[YOH�^M�۝Y^�X��^Yܘ^KNL����L��[���]����\�Ә[YOH�^^�^Yܘ^KMX�M����Y\�
+�U�O���[�\�Ә[YOH��X�K^KL��H�^LHX�M�^\�H^Yܘ^KM����H�\�Ә[YOH��^][\�\�\��\L����[��\�Ә[YOH�^YܙY[�ML�۝X��]L�H���$���[�����H�[\[ZY[���[�O��H�\�Ә[YOH��^][\�\�\��\L����[��\�Ә[YOH�^YܙY[�ML�۝X��]L�H���$���[����ۙϒ\�H
+�X�\��[\����ۙϏ�O��H�\�Ә[YOH��^][\�\�\��\L����[��\�Ә[YOH�^YܙY[�ML�۝X��]L�H���$���[���\�p�ۈ�[��[^�YH][K[��[�O��H�\�Ә[YOH��^][\�\�\��\L����[��\�Ә[YOH�^YܙY[�ML�۝X��]L�H���$���[����ܝH�X��[ܚ]\�[��O���[��[���H�ܙY�\�\���\�Ә[YOH��Y�[^X�[�\���Yܘ^KNLݙ\����Yܘ^KM�^]�]H�۝X��KL���[�Y^^\�H�[��][ۋX��ܜ����ȏ����Y[��\�ܘ]\�[�ς��]����]����\�Ә[YOH�^X�[�\�^^�^Yܘ^KM]N���X�[��[�\����[[���
+�
+H�[�U�H
+NIJK��X�\�X�p�ۈY[��X[��[��[H�X[��]ZY\�\ˏ����]�����X�[ۏ����ʈ8� 8� �H�S�S8� 8� 
+��B��X�[ۈ�\�Ә[YOH�[�[��YܘYY[�X�HKL����]��\�Ә[YOH�X^]�L�^X]]�M�N�M�^X�[�\������\�Ә[YOH�^L��N�^M�۝Y^�X��^]�]HX�M��[\Y^�H�K�H���[XH�\��[^�X�p�ۈ��\�\�K������\�Ә[YOH�^]�]K��^[�X�LL���0�X\�HX��\����\]��[�\��]HHܰ�Y]ˈ�HX�Y\��۝[�X\�[Y�H[[�]YH�HY\HHH�Y���[ˏ���[���H�ܙY�\�\���\�Ә[YOH�[�[�KY�^][\�X�[�\��\L���]�]H^V��Q��
+�H�۝Y^�X��^[�LLKMH��[�YL�ݙ\����Yܘ^KLL�[��][ۋX[�Y��L����ݙ��Y]Л�H�����[H��ۙH�����OH��\��[���܈�����U�YH���H��\�Ә[YOH��MHMH�\�XKZY[�H��YH��]H�LL����MLL�[NL�Nݍ��
+�LL��Ϗ�ݙς�ܙX\��Y[�Hܘ]\�[�ς��\�Ә[YOH�^]�]K�^\�H]MH���[�\��]H0���[���\��Z\��0��]���Y�\���[��[O����]�����X�[ۏ����ʈ8� 8� ���T�8� 8� 
+��B����\��\�Ә[YOH���V��LLY��WH�ܙ\�]�ܙ\�]�]K�LKLL����]��\�Ә[YOH�X^]�M�^X]]�M�N�M����]��\�Ә[YOH�ܚY�N�ܚYX���L��\NX�LL���]���]��\�Ә[YOH��^][\�X�[�\��\L�^]�]H�۝X��^X�\�HX�Lȏ��]��\�Ә[YOH��M�M���]�]K�L��[�Y[��^][\�X�[�\��\�Y�KX�[�\��ܙ\��ܙ\�]�]Ǩ���ݙ��Y]Л�H�����[H��ۙH�����OH��\��[���܈�����U�YH����\�Ә[YOH��MM^]�]H�\�XKZY[�H��YH��]H�LL����MLL�[NL�Nݍ��
+�LL��Ϗ�ݙς��]����\�ДB��]����\�Ә[YOH�^]�]K�L^\�HXY[��\�[^Y���\�[XHH\�[�[��۝��H�Y[�\���X�X�\�HX[�Y�X�\�H\�H\�X�X�[ZY[���H[[Y[���[��[K�����\�Ә[YOH�^]�]K��^^�]Lȏ��ˈM���M�8�%��H�[O����]���]���
+�\�Ә[YOH�^]�]H�۝\�[ZX��^\�HX�M����X���
+��[�\�Ә[YOH��X�K^KL�^\�H^]�]K�L���O�H�Y�H�ٝ[��[ۙ\Ȉ�\�Ә[YOH�ݙ\��^]�]H�[��][ۋX��ܜȏ��[��[ۘ[YY\��O��O��O�H�Y�H��[�[�Ȉ�\�Ә[YOH�ݙ\��^]�]H�[��][ۋX��ܜȏ�p��[���O�O��O��O�H�Y�H���X�[�Ȉ�\�Ә[YOH�ݙ\��^]�]H�[��][ۋX��ܜȏ��X�[���O��O��O�[���H�ܙY�\�\���\�Ә[YOH�ݙ\��^]�]H�[��][ۋX��ܜȏ��YX�Hܘ]\��[�Ϗ�O���[���]���]���
+�\�Ә[YOH�^]�]H�۝\�[ZX��^\�HX�M���Y[�O�
+��[�\�Ә[YOH��X�K^KL�^\�H^]�]K�L���O�[���H����[���\�Ә[YOH�ݙ\��^]�]H�[��][ۋX��ܜȏ�[�X�X\��\�p�ۏ�[�Ϗ�O��O�[���H�ܙY�\�\���\�Ә[YOH�ݙ\��^]�]H�[��][ۋX��ܜȏ��Y�\��\��O�[�Ϗ�O��O�H�Y�H�XZ[Θ�۝X���\�؜K����\�Ә[YOH�ݙ\��^]�]H�[��][ۋX��ܜȏ��۝X���O��O���[���]����]���]��\�Ә[YOH��ܙ\�]�ܙ\�]�]K�LM��^�^X���N��^\���][\�X�[�\��\�Y�KX�]�Y[��\L�^^�^]�]K�������H�YX\�H�\�ДH0�������\�X����\�\��Y������X��[��[H<'��<'��O����]����]���ٛ��\����]���
+B�B
