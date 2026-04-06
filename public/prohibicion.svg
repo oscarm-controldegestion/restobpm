@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 280" width="420" height="280">
+  <!-- Sign background: white border -->
+  <rect width="420" height="280" rx="6" ry="6" fill="#c0392b" stroke="#8b0000" stroke-width="3"/>
+
+  <!-- Chilean flag strip on left -->
+  <rect x="3" y="3" width="90" height="137" rx="3" ry="3" fill="#003087"/>
+  <rect x="3" y="140" width="90" height="137" rx="3" ry="3" fill="#c0392b" stroke="none"/>
+  <!-- White star in blue section -->
+  <polygon points="48,45 52,58 66,58 55,67 59,80 48,71 37,80 41,67 30,58 44,58" fill="white"/>
+
+  <!-- SEREMI text area (white box inside flag zone) -->
+  <rect x="3" y="68" width="90" height="24" fill="white"/>
+  <text x="48" y="84" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#003087" text-anchor="middle">SEREMI</text>
+
+  <!-- "Región de Coquimbo" small text -->
+  <text x="48" y="118" font-family="Arial, sans-serif" font-size="6.5" fill="white" text-anchor="middle">Región de Coquimbo</text>
+
+  <!-- "Ministerio de Salud" -->
+  <rect x="3" y="248" width="90" height="29" rx="0" ry="0" fill="white" opacity="0.15"/>
+  <text x="48" y="258" font-family="Arial, sans-serif" font-size="7" fill="white" text-anchor="middle">Ministerio</text>
+  <text x="48" y="268" font-family="Arial, sans-serif" font-size="7" fill="white" text-anchor="middle">de Salud</text>
+
+  <!-- Main red area separator line -->
+  <line x1="96" y1="10" x2="96" y2="270" stroke="white" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Main text area -->
+  <!-- "PROHIBICIÓN" large text -->
+  <text x="258" y="110" font-family="Arial Black, Arial, sans-serif" font-size="38" font-weight="900" fill="white" text-anchor="middle" letter-spacing="1">PROHIBICIÓN</text>
+
+  <!-- "DE FUNCIONAMIENTO" -->
+  <text x="258" y="158" font-family="Arial Black, Arial, sans-serif" font-size="27" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">DE</text>
+  <text x="258" y="195" font-family="Arial Black, Arial, sans-serif" font-size="27" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">FUNCIONAMIENTO</text>
+
+  <!-- Decorative line under main text -->
+  <line x1="110" y1="210" x2="406" y2="210" stroke="white" stroke-width="2" opacity="0.5"/>
+
+  <!-- Bottom subtext -->
+  <text x="258" y="240" font-family="Arial, sans-serif" font-size="9" fill="white" text-anchor="middle" opacity="0.85">D.S. N° 594/1999 - Reglamento sobre condiciones</text>
+  <text x="258" y="255" font-family="Arial, sans-serif" font-size="9" fill="white" text-anchor="middle" opacity="0.85">sanitarias y ambientales básicas en los lugares de trabajo</text>
+</svg>
